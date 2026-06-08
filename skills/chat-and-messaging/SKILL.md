@@ -1,0 +1,881 @@
+---
+name: ios-chat-and-messaging-design
+description: "Design and build best-in-class native iOS chat, messaging, and group chat apps with the polish of iMessage, Telegram, WhatsApp, Snapchat, Instagram DMs, and Discord. Use this skill whenever the user is building, reviewing, or refining a SwiftUI/UIKit app that involves direct messages, group chats, threads, voice messages, video calls, reactions, typing indicators, presence, read receipts, ephemeral messages, end-to-end encryption, push notifications, or anything backed by APNs, PushKit, CallKit, CryptoKit, NotificationServiceExtension, or Live Activities. Triggers on: chat, messaging, message bubble, group chat, DM, direct message, conversation, composer, message input, reactions, tapback, emoji reaction, reply, thread, threaded reply, typing indicator, presence, online status, last seen, read receipt, double check, blue check, voice message, audio message, push-to-talk, voice note, waveform, end-to-end encryption, E2EE, Signal protocol, ephemeral, disappearing message, view once, self-destruct, sticker, GIF, animated emoji, Genmoji, iMessage app, message effect, confetti, balloons, Live Activity, Dynamic Island, push notification, NSE, notification service extension, CallKit, PushKit, video call, audio call, FaceTime, Communication Notification, Shared with You, SharePlay, App Clip, App Intent, Siri Send Message, CryptoKit."
+metadata:
+  short-description: Design native iOS chat, group, and messaging apps with the polish of iMessage and Telegram.
+---
+
+# iOS Chat & Messaging — Design Engineering Skill
+
+A taste guide for building messaging apps that feel like they belong on iOS. Every value below is opinionated and specific — pulled from studying flows on Mobbin and shipping native chat apps.
+
+## Philosophy
+
+> A chat app is a feeling of being heard, fast.
+
+Three things separate amazing chat from passable chat:
+1. **The composer is the only thing that matters.** Everything else is supporting cast. Time-to-typing must be < 200ms from launch. Send must be instant — show the bubble before the network responds. If you can't get this right, nothing else matters.
+2. **Bubbles are a writing system.** Spacing, grouping, tail placement, and timestamp rhythm communicate WHO said WHAT WHEN faster than reading the text itself. Get the visual language right and people skim conversations 3× faster.
+3. **Latency is the product.** A message that sends in 80ms but arrives in 2000ms feels slower than one that sends in 800ms and arrives in 900ms. Optimistic UI is not optional.
+
+The pixel-pushers' rules:
+- **Bubbles, not cards.** A card has shadows and borders. A bubble has a tail. Chat is conversation, not content.
+- **The composer is permanent.** It sits at the bottom always, even during search, even during the empty state. Never push the composer above the fold.
+- **Read receipts are intimate.** Default them OFF for new users. Telegram and Signal got this right.
+- **Don't infantilize.** No "Looks like there are no messages here yet!" cute illustrations in a serious chat app. Empty states should be quiet.
+
+## Reference apps to study
+
+When in doubt, copy. These are the apps you should be benchmarking against, with the specific flows worth lifting:
+
+| App | What to learn from it | Mobbin flow |
+| --- | --- | --- |
+| **Apple Messages (iMessage)** | The gold standard for native feel — bubble tails, tapbacks, message effects, Genmoji, inline App Clips, Communication Notifications. Everything compiles against this. | (Use the system; observe it on your own device) |
+| **Telegram** | The most feature-dense chat app ever built. Auto-delete timers, custom themes per chat, last-seen privacy ladders, reactions with custom emoji, animated stickers (TGS/Lottie), folder-based chat lists | [Last Seen settings](https://mobbin.com/flows/3bc6e47e-6e9d-4f11-bcd0-0939ad3db4f9), [Reacting to a message](https://mobbin.com/flows/65a949d7-6d85-4ba3-93eb-62bfcf0ddc17) |
+| **WhatsApp** | Voice messages done right, read receipts (gray → blue double check), reply-with-swipe-right, message info screen, end-to-end encryption banner, edit window (15min) | [Message info](https://mobbin.com/flows/91134f85-10a8-48e5-96cf-84f3f67830eb) |
+| **Snapchat** | Ephemeral messages, "save in chat", time-limit picker, screenshot detection notifications, voice notes with transcription | [Setting time limit](https://mobbin.com/flows/4fa7c0d5-b4dd-461a-a732-61fa1b0e848d), [Recording audio](https://mobbin.com/flows/54b4693a-a82e-4346-afc5-8a0036a44952), [Deleting a message](https://mobbin.com/flows/68ff8963-fcd2-403e-88fb-05554bfb8aa5) |
+| **Instagram DMs** | Per-chat themes, reaction picker w/ "tap and hold to super-react", reply-with-context, Notes (lightweight broadcast) | [Reacting to a message](https://mobbin.com/flows/bbd7c647-0100-47d8-b759-4a5b4c4d7de0), [Creating group chat](https://mobbin.com/flows/cdb301fd-273d-47cc-a760-82ed02883f71) |
+| **LINE** | Sticker-first design language, contextual long-press menu (12 actions), stamp reactions, expressive avatars | [Reacting to a message](https://mobbin.com/flows/75fb375d-fd08-4a05-b652-c0f005b27681) |
+| **Discord** | Presence states (Online/Idle/DND/Invisible), server/channel hierarchy, voice channels w/ live activity | [Changing status](https://mobbin.com/flows/7d691cf7-9ec9-483a-9d97-f3b29fd84633) |
+| **WeChat / Taobao** | Push-to-talk voice (hold mic button), in-bubble voice-to-text transcribe, lift-to-ear playback | [WeChat voice](https://mobbin.com/flows/b043b433-ef7d-4eff-9393-8ae5958d48fc), [Taobao voice](https://mobbin.com/flows/9bc4139a-bcae-4070-bdb8-2f3423f40c6a) |
+| **Luma / Beside** | Group chat creation with custom emoji avatar + theme color, clean conversation list, suggested replies | [Luma create group](https://mobbin.com/flows/45c43eee-a684-4730-a1c3-7f26eba77d38), [Beside create group](https://mobbin.com/flows/769561b5-e079-489b-a124-d99355d970d4) |
+| **Microsoft Teams** | Embedded calls in chat, threaded replies, suggested message starters | [Creating a chat](https://mobbin.com/flows/beb5079a-8928-473a-9228-42d3106635c3) |
+| **Pi (Inflection AI) / Replika** | AI chat with voice input, typing indicator that animates, transcription mid-stream | [Pi reactions](https://mobbin.com/flows/99931f05-5968-4759-b40e-0e891e0492e9), [Replika voice](https://mobbin.com/flows/e0d853a4-037e-415a-b18f-076b2972aa51) |
+| **Locket** | Broadcast-style "message everyone": photo capture is the message; no library, no scroll | [Locket camera](https://mobbin.com/flows/a16e33e2-501a-4c26-ac00-ab960e345040) |
+| **PlayStation App** | Reaction picker positioning, "PLEASE WAIT" giant stickers, game-context chat | [Chat detail](https://mobbin.com/flows/acbebeb5-566a-4985-99ec-0b29be8a3e23) |
+| **Skype** | Status broadcast ("Share what you're up to"), DND with explanatory modal | [Availability status](https://mobbin.com/flows/2daa6dba-5f7b-4c14-a0ee-c3599e1b1d4d) |
+
+---
+
+## Hero interactions — the moments that matter
+
+### 1. The message bubble
+
+The bubble is the writing system. Get it perfect:
+
+**Geometry:**
+- **Corner radius**: 18pt (continuous corner / squircle, NOT system circular). Use `RoundedRectangle(cornerRadius: 18, style: .continuous)` in SwiftUI or `.layer.cornerCurve = .continuous` in UIKit.
+- **Max width**: 75% of screen width (`UIScreen.main.bounds.width * 0.75`). Wider than that, the rag-right edge becomes ugly and reading speed drops.
+- **Internal padding**: 12pt horizontal, 8pt vertical (single-line bubbles). For multi-line, increase vertical to 10pt.
+- **Bubble-to-bubble spacing within a group**: 2pt.
+- **Bubble-to-bubble spacing across senders**: 14pt.
+- **Bubble-to-bubble spacing across time gaps**: 24pt + an inline timestamp pill.
+
+**Colors:**
+- **Sent (self) bubble**: `Color.accentColor` (iMessage blue) at 100%, white text. For app brand variations, use the brand accent but ALWAYS check contrast (WCAG AA against the chosen text color).
+- **Received bubble**: `Color(.tertiarySystemGroupedBackground)` for light mode, `Color(.systemGray5)` for dark mode. Text color: `.label` (auto-adapts).
+- **Failed-to-send bubble**: same shape as sent, but with a 1pt red border and a red exclamation icon to the right.
+- **Pending/queued bubble**: 60% opacity of the sent bubble. Settles to 100% on delivery confirmation.
+
+**Bubble grouping (THE critical detail):**
+
+Consecutive messages from the same sender within 60 seconds form a "burst". A burst has:
+- The FIRST bubble: full radius on the outside corner (top-right for sent, top-left for received), 4pt small radius on the inside (touching) corner.
+- The MIDDLE bubbles: 4pt small radius on the inside corners, full 18pt on the outside.
+- The LAST bubble: full radius on the outside corners (top-right + bottom-right for sent), with the tail extending from the corner.
+
+```swift
+enum BubblePosition {
+    case single, first, middle, last
+}
+
+func cornerRadii(for position: BubblePosition, isSent: Bool) -> RectangleCornerRadii {
+    let small: CGFloat = 4
+    let large: CGFloat = 18
+    let outer = isSent ? "right" : "left"
+    switch position {
+    case .single: return .init(topLeading: large, bottomLeading: large, bottomTrailing: large, topTrailing: large)
+    case .first:  return isSent
+        ? .init(topLeading: large, bottomLeading: large, bottomTrailing: small, topTrailing: large)
+        : .init(topLeading: large, bottomLeading: small, bottomTrailing: large, topTrailing: large)
+    case .middle: return isSent
+        ? .init(topLeading: large, bottomLeading: large, bottomTrailing: small, topTrailing: small)
+        : .init(topLeading: small, bottomLeading: small, bottomTrailing: large, topTrailing: large)
+    case .last:   return isSent
+        ? .init(topLeading: large, bottomLeading: large, bottomTrailing: large, topTrailing: small)
+        : .init(topLeading: small, bottomLeading: large, bottomTrailing: large, topTrailing: large)
+    }
+}
+```
+
+**The tail** (iMessage convention):
+- Only render the tail on the LAST bubble of a burst.
+- Tail is a small ~6 × 8pt curved triangle that emerges from the outside-bottom corner.
+- Implement with a custom `Path` (a quadratic Bezier sweeping from the bubble's edge outward and back).
+- For sent: tail on bottom-right, pointing right.
+- For received: tail on bottom-left, pointing left.
+
+**Avatars** (received messages only):
+- Show only on the LAST bubble of a received burst (matches the tail).
+- 28pt circle, 8pt to the left of the bubble.
+- 1pt subtle border in `Color(.separator)` to give edge against light backgrounds.
+
+**Typography inside bubbles:**
+- Body text: SF Pro, regular, 17pt, line height 22pt.
+- For shorter messages (≤ 3 emoji), AUTO-SCALE the emoji to 48pt and remove the bubble. iMessage does this. It makes single-emoji messages feel alive.
+
+### 2. The composer
+
+The composer is the most-used surface in your entire app. Treat it that way.
+
+**Geometry:**
+- **Height (collapsed)**: 36pt for the input pill + 8pt vertical safe-area padding above + 8pt below.
+- **Pill background**: `Color(.tertiarySystemBackground)` with `cornerRadius: 18, style: .continuous` (matching bubble radius).
+- **Pill horizontal padding**: 12pt left, 12pt right (text content area).
+- **Pill grows** as user types up to 5 lines. After 5 lines, scroll internally.
+- **+ button (attachment)**: 28pt circle to the LEFT of the pill, 8pt spacing. Subtle gray fill.
+- **Mic / Send button**: 28pt circle to the RIGHT of the pill, 8pt spacing.
+
+**Mic ↔ Send swap** (THE detail):
+- When the text field is empty: mic icon appears on the right.
+- When user types ANY character: mic morphs into send arrow with `scale 0 → 1` + `opacity 0 → 1` (180ms `.spring(response: 0.32, dampingFraction: 0.7)`). Mic crossfades out simultaneously.
+- When user deletes back to empty: reverse.
+- Haptic `.selectionChanged` on each swap.
+
+**Keyboard handling:**
+- The composer MUST stick to the top of the keyboard. Use `keyboardLayoutGuide` (UIKit) or `.ignoresSafeArea(.keyboard, edges: .bottom)` with explicit padding (SwiftUI).
+- When keyboard appears, the bubble list scrolls to the bottom with NO animation (or 80ms `.linear`). The keyboard's animation curve (`UIView.AnimationCurve` from the notification) is what you should match.
+- **Critical**: don't let the bubble list jump. Compute the offset and apply it within `UIView.animate(withDuration: keyboardAnimationDuration, delay: 0, options: .curveSetting)` — this matches the keyboard's curve perfectly.
+
+**Return key polish (`.submitLabel`):**
+- Set `.submitLabel(.send)` on the text field so the keyboard's return key shows "send" — not a generic return arrow. Available labels: `.done`, `.go`, `.next`, `.return`, `.search`, `.send`, `.join`, `.route`, `.continue`. Match the verb to the action.
+- Wire `.onSubmit { send() }` so the return key actually fires the send. iOS keyboards expect this.
+- For multi-line composers where Return should insert a newline, don't override — let the system handle it. Pair with a dedicated send button.
+
+```swift
+TextField("Message", text: $draft, axis: .vertical)
+    .lineLimit(1...5)
+    .submitLabel(.send)
+    .onSubmit { send() }
+```
+
+**Send animation:**
+1. User taps send. IMMEDIATELY (within 16ms):
+2. The bubble appears at the composer's text position with full opacity but at 70% scale.
+3. The text field clears.
+4. The bubble flies up to its slot in the list with `matchedGeometryEffect` (SwiftUI) or `UIView.transitionWithView` (UIKit), scaling 0.7 → 1.0 + slight overshoot to 1.04 → settle.
+5. Spring: `.spring(response: 0.42, dampingFraction: 0.78)`.
+6. Haptic on send: `UIImpactFeedbackGenerator(.light).impactOccurred()` at the moment of release.
+7. If the send eventually fails: bubble subtly desaturates (60% opacity) and a red `!` appears beside it. Tap to retry. Haptic `.error`.
+
+**The signature detail: the loading indicator travels.** If sending is slow enough to need a progress hint, DON'T show it at the send button — show it INSIDE the optimistically-rendered bubble in the conversation. The eye follows one focal point: the bubble. A 12pt circular `ProgressView` aligned to the bubble's trailing edge does the job. When delivery confirms, the indicator dissolves and the read receipt fades in beside it. This is the [Family Values pattern](https://benji.org/family-values) — loading states travel to their destination.
+
+### 3. Reactions / tapbacks
+
+The long-press → bubble lifts → reaction picker appears flow.
+
+**Long-press detection:**
+- 0.45 second long-press triggers the menu (slightly faster than iOS default of 0.5).
+- During the press, the bubble subtly scales to 1.02 (signaling "you're activating me").
+- At the threshold: bubble lifts to 1.04, background blurs (`UIBlurEffect(style: .systemUltraThinMaterialDark)` or `.glassEffect()` on iOS 26+).
+- Haptic on threshold cross: `UIImpactFeedbackGenerator(.medium).impactOccurred()`.
+
+**Reaction picker:**
+- A horizontal pill containing 6 quick emojis + a "+" for the full picker. Positioned ABOVE the bubble (or below if the bubble is at the top of the screen).
+- Animation:
+  - Pill scales from 0 (origin at the bubble's nearest corner) to 1.0 with `.spring(response: 0.36, dampingFraction: 0.72)`.
+  - Emoji icons inside the pill stagger their entrance: each 0.04s after the previous, scale 0 → 1.0 with overshoot.
+- Tapping an emoji:
+  - Haptic `.medium`.
+  - The emoji animates from the picker to its final position on the bubble (corner overlap), shrinking from 38pt to 16pt as it lands.
+  - The picker dismisses with `scale 1 → 0` (180ms `.easeIn`).
+- Tapping outside dismisses with no haptic.
+
+**Reaction badges on bubbles:**
+- Position: overlapping the corner of the bubble (top-right for sent, top-left for received), 8pt × 8pt overlap into the bubble.
+- Geometry: pill shape, 22pt tall, dynamic width. White background (system grouped background), 0.5pt subtle border.
+- Multiple reactions: each emoji + count, e.g., "❤️ 3 😂 1".
+- Tap a reaction to add your own (toggles). Long-press for the "who reacted" detail sheet.
+
+**Tapback context menu** (additional actions besides reaction):
+- Same long-press trigger. Below the reaction pill, a context menu appears with: Reply, Copy, Forward, Pin, Translate, Edit (if your own message, within 15min), Info, Delete.
+- Style: `UIMenu` (UIKit) or `.contextMenu` (SwiftUI), but custom-positioned to appear right under the reaction pill. iMessage's choreography is the reference.
+
+### 4. Reply with swipe (WhatsApp / iMessage)
+
+The "swipe-right on a bubble to reply" gesture is essential. Implementation:
+
+```swift
+.gesture(
+    DragGesture(minimumDistance: 16)
+        .onChanged { value in
+            let dx = max(0, value.translation.width)
+            offset = min(dx, 80) // cap at 80pt
+            // Show a reply arrow icon fading in as dx grows
+            replyIndicatorOpacity = min(1.0, dx / 60)
+            // Haptic when crossing threshold
+            if dx > 60 && !hasFiredHaptic {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                hasFiredHaptic = true
+            }
+        }
+        .onEnded { value in
+            if value.translation.width > 60 {
+                onReply()
+            }
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+                offset = 0; replyIndicatorOpacity = 0
+            }
+            hasFiredHaptic = false
+        }
+)
+```
+
+**Reply chip in composer:**
+- Once user has tapped reply (or completed the swipe), a chip appears ABOVE the input pill:
+  - Vertical accent-color bar (3pt × full height) on the left.
+  - Original sender's name (semibold, 13pt, accent color).
+  - Truncated original message text (regular, 13pt, secondary label, single line, with `...` truncation).
+  - "×" close button on the right.
+- The chip animates IN with `.spring(response: 0.32, dampingFraction: 0.85)` + slide-up + opacity.
+- When the reply is sent, the original message reference is preserved on the new bubble (inline at the top of the bubble), and TAPPING that inline reference scrolls to the original with a yellow flash highlight (0.6s, `.easeOut`).
+
+### 5. Voice messages
+
+This is where second-rate apps fail. Get the WhatsApp pattern right:
+
+**Recording:**
+- The mic icon (right of composer) is the trigger. **Hold to record**, release to send. NOT tap-toggle.
+- On press-down:
+  - Haptic `.medium`.
+  - The composer transforms: the text pill is replaced with a recording indicator (red dot pulsing + timer "0:03"), and a "← slide to cancel" hint appears.
+  - The mic icon grows to ~52pt and slides slightly left.
+  - A live waveform builds along the bottom of the screen.
+- During hold:
+  - **Slide LEFT past 80pt**: cancel. Haptic `.warning`, recording discarded, UI restores.
+  - **Slide UP past 60pt**: lock. The mic icon snaps into a "lock" position; user can release and continue recording hands-free. Haptic `.success`.
+  - **Release in place**: send. Haptic `.light`.
+
+**Live waveform:**
+- Use `AVAudioRecorder` with metering enabled. Poll `averagePower(forChannel: 0)` every 50ms.
+- Render 60–80 vertical bars, mirrored vertically (symmetric around the center). Bar width 2pt, gap 2pt.
+- Each new sample shifts the bars left and appends a new bar at the right.
+- Bar colors: accent color for "speech" (power > threshold), gray for "silence".
+
+**Playback bubble:**
+- 240pt × 56pt rounded bubble.
+- Inside: 32pt play/pause button on the left (system play icon), waveform in the middle, duration text on the right.
+- The waveform is a STATIC visualization of the recording (pre-computed from the audio samples, downsampled to fit the bubble width).
+- Scrubbing: drag finger across the waveform to scrub through playback. Haptic `.soft` every 0.5s of audio crossed.
+- Tap-to-play: `UIImpactFeedbackGenerator(.light).impactOccurred()` on tap.
+- **Speed control**: small "1×" pill bottom-right; tap to cycle 1× → 1.5× → 2× → 1×.
+
+**Lift-to-ear playback** (WhatsApp pattern):
+- When a voice message is playing and the user lifts the phone to their ear, switch audio output from speaker to earpiece using `AVAudioSession`.
+- Detect proximity with `UIDevice.current.isProximityMonitoringEnabled = true` and observe `proximityStateDidChangeNotification`.
+- This is incredibly delightful when it works.
+
+**Transcription** (on-device, iOS 13+):
+- After recording, run `SFSpeechRecognizer` on-device (`requiresOnDeviceRecognition = true`).
+- Show a small "Aa" button on the voice bubble; tap to reveal the transcription below the waveform.
+- Cache transcriptions; don't re-run.
+- For new messages: kick off transcription immediately when received so the "Aa" button reveals instantly.
+
+### 6. Typing indicators
+
+The three-dot animation is iconic but you have to do it right.
+
+**Visual:**
+- Three dots, 7pt diameter each, 4pt gap between them.
+- Inside a mini bubble: same color/shape as a received bubble, smaller (height 22pt), positioned at the receiver's NEXT bubble location.
+- Dots animate: each rises by 3pt, with staggered timing. Dot 1 starts at t=0, dot 2 at t=0.15s, dot 3 at t=0.3s. Each cycle is 0.9s (rise → fall).
+- Easing: `.easeInOut` for the rise/fall.
+
+**Behavior:**
+- Show after 0.5s of detected typing (don't fire on every keystroke).
+- Hide after 2.5s of no typing (or immediately when a message is received).
+- Animate IN with `.spring(response: 0.32, dampingFraction: 0.78)` (scale 0 → 1.0 + opacity).
+- Animate OUT with `scale 1 → 0` (180ms `.easeIn`).
+- Persistence: typing indicators should survive a brief network drop (cache the last "typing" event for 4s).
+
+```swift
+struct TypingDots: View {
+    @State private var animating = false
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { i in
+                Circle()
+                    .frame(width: 7, height: 7)
+                    .offset(y: animating ? -3 : 0)
+                    .animation(
+                        .easeInOut(duration: 0.45)
+                        .repeatForever(autoreverses: true)
+                        .delay(Double(i) * 0.15),
+                        value: animating
+                    )
+            }
+        }
+        .onAppear { animating = true }
+    }
+}
+```
+
+### 7. Read receipts
+
+This is sociologically loaded UI — design it carefully.
+
+**Visual options** (pick one and commit):
+1. **iMessage**: small "Delivered" or "Read 2:34 PM" beneath the LAST sent bubble.
+2. **WhatsApp**: single check (sent) → double gray check (delivered) → double blue check (read), positioned inside the bubble at the bottom-right.
+3. **Telegram**: single check (sent), double check (delivered/read combined).
+4. **Signal**: outlined check (sent), filled check (delivered), double check (read).
+
+**Animation**:
+- Each state transition animates the check icon with a tiny `.symbolEffect(.bounce)` (iOS 17+) or a custom 200ms scale-up-and-back.
+- Haptic on "read" transition (only for sent messages): `UIImpactFeedbackGenerator(.soft).impactOccurred()` ONCE per conversation per session — multiple reads should NOT haptic-spam.
+
+**Privacy settings** (Telegram's gold standard):
+- Default: read receipts OFF for new users (controversial but more humane).
+- Three tiers: Everybody, My Contacts, Nobody.
+- "Hide Read Time" toggle (subtle: read receipts work but timestamps are hidden).
+- Exception list: "Always share with these people".
+
+### 8. Presence / Online status
+
+**Online indicator:**
+- 8pt green dot, bottom-right corner of avatar, with 2pt white border.
+- Inside chat header: "Online" in 13pt regular, secondary label color.
+
+**Last-seen text:**
+- "Last seen at 2:34 PM" (today)
+- "Last seen yesterday at 9:12 PM"
+- "Last seen recently" (vague, Telegram pattern for partial-privacy users)
+- "Last seen within a week" (extremely vague)
+- "Last seen a long time ago" (the polite "they ghosted")
+
+**Self-disclosed status** (Discord pattern):
+- Online (green)
+- Idle (yellow, half-moon icon)
+- Do Not Disturb (red, no-entry icon)
+- Invisible (gray)
+- Custom Status (any emoji + text, expiring after 1h / 4h / today / never)
+
+**Active now grouping**: in the chat list, surface a horizontal scroll row of avatars with green dots showing "Active Now". Tap to start a chat.
+
+### 9. Message effects (iMessage-inspired)
+
+Visual effects on send: confetti, fireworks, slam, gentle, invisible ink, etc. Optional but DELIGHTFUL.
+
+**How to implement**:
+- Long-press the send button (instead of tapping) to open an effects picker.
+- The picker shows: Slam, Loud, Gentle, Invisible Ink, plus full-screen effects (Confetti, Balloons, Fireworks, Lasers, Heart, Spotlight).
+- After pick, tap the send arrow to actually send.
+- Use `CAEmitterLayer` for particle effects (confetti, fireworks). For more sophisticated effects (lasers, spotlight), use `SCNView` or a custom Metal shader.
+- **Reduce Motion**: respect `UIAccessibility.isReduceMotionEnabled` — when true, skip the particle effects but keep the bubble itself (e.g., "Slam" sends as a normal bubble).
+
+**Performance**: limit emitter cells to ~120 particles. Cap effect duration at 3.5s. Always have an "skip" tap target.
+
+### 10. Stickers, GIFs, Genmoji
+
+**Sticker drawer**:
+- Surfaced above the keyboard (replacing it) when user taps a sticker icon.
+- Top: tab bar with recent stickers, then packs the user owns.
+- Each sticker: 88pt × 88pt cell, 8pt gap.
+- Tap to send (no preview confirm — fast).
+- Long-press to peel the sticker (iOS 17+ peel effect) and drag it onto another part of the conversation (annotation pattern).
+
+**Genmoji** (iOS 18.2+, on-device on Apple Intelligence devices):
+- In the keyboard, surface a "Create Genmoji" button.
+- User types a prompt; on-device model generates 4 candidate emoji.
+- User picks; the Genmoji is sent as a custom sticker.
+- Recipients without Apple Intelligence see a PNG fallback.
+
+**GIF picker** (Giphy or Tenor):
+- Tab in the sticker drawer or a dedicated icon.
+- Search field at top; trending row below.
+- Each GIF: tap to send, long-press for preview at full size.
+
+### Trays adopt the environment
+
+When a sticker picker, GIF browser, emoji panel, or any modal is presented from a themed chat (dark theme, custom wallpaper, brand-tinted), it should INHERIT that environment's color scheme — not snap to the system default. A sticker drawer over a dark chat should be dark. A confirmation over a Telegram custom-themed chat should pick up the theme. The visual environment follows the user across modal layers; sudden theme switches are spatially disorienting.
+
+```swift
+.sheet(isPresented: $showStickers) {
+    StickerPickerView()
+        .preferredColorScheme(chatTheme.colorScheme)
+        .tint(chatTheme.accent)
+        .presentationBackground(chatTheme.surfaceColor)
+}
+```
+
+This is the design-with-taste "trays adapt to context" rule applied natively.
+
+### 11. Group chat creation
+
+The 3-step flow (Luma / Beside / Instagram pattern):
+
+**Step 1 — Pick people:**
+- Top: search field with auto-suggest.
+- Below: list of contacts, with a "Suggested" section at the top (frequency-based + recent).
+- Selection: tap to add. Selected people appear as chips at the top of the search field (pill, 24pt tall, with avatar + name + × to remove).
+- Limit and counter: "3 selected" tracker visible.
+
+**Step 2 — Customize:**
+- Group emoji avatar (huge, ~80pt, in a circle): tap to pick from emoji or generate a Genmoji.
+- Theme color picker: 6–8 horizontal swatches (Apple style: red, orange, yellow, green, mint, teal, blue, indigo, purple, pink, brown).
+- Group name field (optional — default to comma-list of members).
+- Description (optional).
+
+**Step 3 — Create:**
+- "Create Group Chat" button — full-width pill, 56pt tall, accent color, semibold 17pt text.
+- Haptic `.success` on creation.
+- Animate the transition to the new chat with a smooth push from the right (standard navigation animation).
+
+### 12. Ephemeral / disappearing messages
+
+**Auto-delete timer** (Telegram pattern):
+- Toggle in chat settings, OR a chat-wide setting "Auto-Delete Messages" with options: 24 hours, 7 days, 31 days, off.
+- Once set, all messages in the chat get a small clock icon next to the timestamp.
+- After the duration, messages fade out with `opacity 1 → 0` over 600ms and are deleted both locally and remotely.
+
+**View-once messages** (WhatsApp / Snapchat):
+- Toggle a "view once" icon in the composer before sending an image.
+- Recipient sees the message as a blurred placeholder; tap to view, opens full-screen.
+- Once viewed, the message turns into "Opened" placeholder forever.
+- Snapchat allows a 1–10 second view window (or infinity); WhatsApp allows ONE view, period.
+
+**Screenshot detection** (Snapchat pattern):
+- Observe `UIApplication.userDidTakeScreenshotNotification`.
+- When detected during a view-once or ephemeral message, send a system message to the other party: "📸 [User] took a screenshot".
+- Bonus: also detect screen recording with `UIScreen.main.isCaptured` (KVO).
+
+### 13. End-to-end encryption indicators
+
+**Banner**:
+- At the start of any new conversation, a centered system message: "🔒 Messages are end-to-end encrypted. No one outside this chat can read or listen to them. Tap to learn more."
+- Visual: light background pill, no avatar, no timestamp, center-aligned text (12pt regular, secondary label).
+- Tap to open a sheet explaining the encryption + safety number / verification flow.
+
+**Verification**:
+- Safety number / verification code, displayed as a QR code + 60-digit number.
+- Both parties can scan each other's QR to verify out-of-band. Animate the QR appearing with a Vision-framework subject-lifting style shimmer.
+
+**Lock icon in nav**:
+- Subtle 12pt lock icon next to the chat title, tinted secondary.
+- For unverified contacts: tinted system orange. Tap to see "Verify safety number?" prompt.
+
+### 14. Call experiences (audio & video)
+
+**Outgoing call**:
+- Full-screen native CallKit UI (use `CXProvider` + `CXCallController`). This is critical — your call appears in the system call log, on the lock screen, with Bluetooth controls.
+- Custom in-app pre-call screen: avatar centered (120pt circle), name below (28pt semibold), "Calling..." subtitle, animated wave rings emanating from the avatar (CAReplicatorLayer for the rings).
+
+**Incoming call**:
+- Use CallKit's native incoming UI. Apple won't approve apps that try to override this.
+- Pair with PushKit (VoIP push) for instant ring even when the app is suspended/killed.
+
+**In-call UI** (when user enters the call screen):
+- Top: tiny FaceTime/audio waveform indicator.
+- Center: large avatar OR self-camera PiP.
+- Bottom: mute / video / speaker / end call (large red circle) — standard 4-button row, with 64pt tap targets.
+
+**Live Activity for ongoing call**:
+- When the user backgrounds the app, surface a Live Activity (Dynamic Island on iPhone 14 Pro+):
+  - Compact: speaker icon + call duration.
+  - Expanded: avatar + name + duration + mute toggle + end call.
+
+```swift
+import ActivityKit
+
+struct CallAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var duration: TimeInterval
+        var isMuted: Bool
+    }
+    var calleeName: String
+    var calleeAvatarURL: URL
+}
+
+let activity = try Activity<CallAttributes>.request(
+    attributes: CallAttributes(calleeName: "Sam", calleeAvatarURL: ...),
+    content: .init(state: .init(duration: 0, isMuted: false), staleDate: nil),
+    pushType: .token
+)
+```
+
+### 15. Chat list (the conversation index)
+
+**Cell layout:**
+- 72pt tall (vertical).
+- 56pt avatar on the left, 12pt right margin to content.
+- Content area: vertically centered.
+  - Top: chat title (17pt semibold) + timestamp (right-aligned, 13pt regular, secondary).
+  - Bottom: last message preview (15pt regular, secondary label, 1 line truncation) + unread badge (right-aligned, blue circle with white count).
+- Right-edge: chevron (`Image(systemName: "chevron.right")`, 12pt, tertiary tint).
+
+**Avatar**:
+- 56pt circle. For group chats: 4-grid mini-avatars OR custom emoji per the group's theme.
+- Active-now indicator: 14pt green dot bottom-right with 2pt white border.
+
+**Sorting**:
+- Default: most-recently-active first.
+- Pinned chats: pin icon to the right of the title; pinned chats are always at the top of the list with a subtle background tint.
+
+**Unread state**:
+- Bold text for title.
+- Blue unread badge with count (system blue, 22pt height, dynamic width).
+- For mention/reply: red @ badge instead of blue count.
+
+**Swipe actions:**
+- Swipe-left: Archive, Mute, Delete (red, terminal).
+- Swipe-right: Pin, Mark as Read/Unread.
+- Use `swipeActions(edge:)` in SwiftUI or `UISwipeActionsConfiguration` in UIKit.
+
+**Search**:
+- Pull down to reveal the search field.
+- Recent searches above results.
+- Search hits inline-highlight the matched substring in the preview.
+
+---
+
+## Animation curves cheat sheet
+
+| Surface | Curve | Notes |
+| --- | --- | --- |
+| Bubble send (composer → list) | `.spring(response: 0.42, dampingFraction: 0.78)` | Slight overshoot, settles fast |
+| Bubble receive | `.spring(response: 0.4, dampingFraction: 0.85)` | Subtler than send — your message arriving should be calm |
+| Composer pill grow | `.linear` | Multi-line growth — NEVER spring, fights the keyboard |
+| Mic ↔ send swap | `.spring(response: 0.32, dampingFraction: 0.7)` | Snappy, definite |
+| Reaction pill appear | `.spring(response: 0.36, dampingFraction: 0.72)` | Bouncy |
+| Reaction emoji stagger | `0.04s delay each` + same spring | Cascading |
+| Reaction land on bubble | `.spring(response: 0.32, dampingFraction: 0.65)` | Bouncier — "stuck" |
+| Long-press menu open | `.spring(response: 0.36, dampingFraction: 0.78)` | Match iMessage |
+| Reply chip appear | `.spring(response: 0.32, dampingFraction: 0.85)` | Calm |
+| Typing dots (each cycle) | `.easeInOut(duration: 0.45)` repeat | Standard |
+| Chat list cell swipe | `.spring(response: 0.32, dampingFraction: 0.82)` | iOS-native feel |
+| Push to chat detail | system push | Don't override |
+| Modal sheet (e.g., contact info) | `.spring(response: 0.45, dampingFraction: 0.86)` | Standard sheet |
+| Call screen present | `.spring(response: 0.5, dampingFraction: 0.92)` | Slightly slower — gravity |
+
+**Reduce Motion**: replace springs with `.easeInOut(duration: 0.18)` crossfades, kill stagger, skip message effects.
+
+---
+
+## Haptics cheat sheet
+
+| Action | Generator | Style | Notes |
+| --- | --- | --- | --- |
+| Tap send | `UIImpactFeedbackGenerator` | `.light` | Prepare in `keyboardWillShow` |
+| Message delivered (confirmation) | none | — | Don't haptic on every delivery — too much noise |
+| Message read (first time per session) | `UIImpactFeedbackGenerator` | `.soft` | One per conversation per session |
+| Receive new message (foreground) | `UIImpactFeedbackGenerator` | `.soft` | Optional — many users find this jarring; opt-in |
+| Long-press to open menu | `UIImpactFeedbackGenerator` | `.medium` | Fire on threshold cross |
+| Pick reaction | `UIImpactFeedbackGenerator` | `.medium` | On tap |
+| Reaction lands on bubble | `UIImpactFeedbackGenerator` | `.soft` | Fire when animation finishes |
+| Mic ↔ send swap | `UISelectionFeedbackGenerator` | `.selectionChanged` | Prepare on text changes |
+| Voice record start | `UIImpactFeedbackGenerator` | `.medium` | On press-down |
+| Voice record cancel (drag past threshold) | `UINotificationFeedbackGenerator` | `.warning` | One-shot |
+| Voice record lock (drag up) | `UINotificationFeedbackGenerator` | `.success` | One-shot |
+| Voice playback scrub | `UIImpactFeedbackGenerator` | `.soft` | Throttle to 100ms |
+| Swipe-to-reply threshold | `UIImpactFeedbackGenerator` | `.soft` | On threshold cross only |
+| Chat list swipe-action threshold | `UIImpactFeedbackGenerator` | `.soft` | On threshold |
+| Delete confirmation | `UINotificationFeedbackGenerator` | `.warning` | When destructive action confirmed |
+| Outgoing call initiated | `UIImpactFeedbackGenerator` | `.heavy` | One-shot |
+
+**Custom haptic patterns** for delight:
+- **Send a "slam" effect message**: use CoreHaptics with a sharp transient + continuous decay (think: a small explosion).
+- **Bubble lands after a long send animation**: a tiny "tick-tick" pattern (two `.soft` impacts 80ms apart).
+
+```swift
+let engine = try CHHapticEngine()
+try engine.start()
+
+let pattern = try CHHapticPattern(events: [
+    CHHapticEvent(eventType: .hapticTransient, parameters: [
+        .init(parameterID: .hapticIntensity, value: 1.0),
+        .init(parameterID: .hapticSharpness, value: 0.8)
+    ], relativeTime: 0),
+    CHHapticEvent(eventType: .hapticContinuous, parameters: [
+        .init(parameterID: .hapticIntensity, value: 0.4),
+        .init(parameterID: .hapticSharpness, value: 0.2)
+    ], relativeTime: 0.05, duration: 0.4)
+], parameters: [])
+
+try engine.makePlayer(with: pattern).start(atTime: 0)
+```
+
+---
+
+## Typography for chat UIs
+
+| Surface | Font | Weight | Size | Notes |
+| --- | --- | --- | --- | --- |
+| Bubble text | SF Pro | `.regular` | 17pt | Use Dynamic Type via `.body` |
+| Solo emoji (≤3) | system emoji | — | 48pt | Auto-scale when message is emoji-only |
+| Timestamp (inline group) | SF Pro | `.regular` | 11pt | Tracking 0.2, secondary label color |
+| Read receipt | SF Pro | `.regular` | 11pt | Secondary label, beneath last sent bubble |
+| Chat title (header) | SF Pro | `.semibold` | 17pt | Truncate with middle ellipsis if long |
+| Chat subtitle (online status) | SF Pro | `.regular` | 13pt | Secondary label |
+| Composer text input | SF Pro | `.regular` | 17pt | NEVER use a different size — matches bubbles for WYSIWYG |
+| Chat list title | SF Pro | `.semibold` (unread) / `.regular` (read) | 17pt | |
+| Chat list preview | SF Pro | `.regular` | 15pt | Secondary label, 1-line truncation |
+| Chat list timestamp | SF Pro | `.regular` | 13pt | Tertiary label |
+| Unread badge | SF Pro | `.semibold` | 13pt | White on system blue |
+| System message (e.g., "X joined") | SF Pro | `.regular` | 13pt | Center-aligned, secondary label |
+| In-call name | SF Pro | `.semibold` | 28pt | White on dark background |
+| In-call duration | SF Mono | `.regular` | 17pt | Monospace digits — they don't jitter |
+
+**Always support Dynamic Type** via `.body`, `.callout`, `.caption`, etc. Test with extra-large accessibility sizes (AX5).
+
+---
+
+## Color & material
+
+- **Sent bubble**: app's accent color. For iMessage parity: `Color(red: 0.0, green: 0.48, blue: 1.0)` (iMessage blue). For green-bubble nostalgia: `Color(red: 0.21, green: 0.78, blue: 0.35)` (SMS green).
+- **Received bubble**: `Color(.tertiarySystemGroupedBackground)` (light), `Color(.systemGray5)` (dark).
+- **Background of conversation**: `Color(.systemGroupedBackground)` (light), `Color(.systemBackground)` (dark). Telegram and WhatsApp use a subtle pattern/wallpaper — if you do this, make it OFF by default.
+- **Composer background**: `Color(.systemBackground)` with a top border (`Color(.separator)`, 0.5pt).
+- **Unread badge**: `Color(.systemBlue)`.
+- **Failed/error**: `Color(.systemRed)`.
+- **Mention highlight**: `Color(.systemYellow).opacity(0.18)` background tint on the bubble.
+
+**iOS 26 Liquid Glass considerations**: if your overall app is using Liquid Glass surfaces, the composer and nav bar can pick up `.glassEffect()` modifiers. Bubbles themselves should remain solid — glassy bubbles destroy readability and the conversational hierarchy.
+
+---
+
+## Novel iOS APIs to consider
+
+This is where you separate the chat app from the *iOS* chat app.
+
+### CallKit + PushKit (table stakes for any calling feature)
+- **CallKit**: integrates your audio/video calls into the system UI. The call shows up in the lock-screen call UI, the call history, and respects "Do Not Disturb / Focus" settings. NO chat app shipping calls in 2026 should not use CallKit.
+- **PushKit**: VoIP push notifications wake your app even from a killed state to ring instantly. Critical: you MUST report the call to CallKit within 5 seconds of receiving the push, or Apple will throttle your VoIP push entitlement.
+
+```swift
+import PushKit
+import CallKit
+
+let pushRegistry = PKPushRegistry(queue: .main)
+pushRegistry.desiredPushTypes = [.voIP]
+pushRegistry.delegate = self
+
+// In delegate:
+func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
+    let provider = CXProvider(configuration: CXProviderConfiguration(localizedName: "MyApp"))
+    let update = CXCallUpdate()
+    update.remoteHandle = CXHandle(type: .generic, value: payload.dictionaryPayload["caller"] as! String)
+    provider.reportNewIncomingCall(with: UUID(), update: update) { error in completion() }
+}
+```
+
+### Communication Notifications API (iOS 15+)
+The system that puts your contact's AVATAR on the lock-screen notification with their NAME (not your app's name). Massively differentiating.
+
+```swift
+// In your Notification Service Extension:
+let contactHandle = INPersonHandle(value: "alice@example.com", type: .emailAddress)
+let person = INPerson(personHandle: contactHandle, nameComponents: nameComponents, displayName: "Alice", image: INImage(imageData: avatarPNG), contactIdentifier: nil, customIdentifier: nil, isMe: false, suggestionType: .none)
+let intent = INSendMessageIntent(recipients: [me], outgoingMessageType: .outgoingMessageText, content: messageBody, speakableGroupName: nil, conversationIdentifier: chatID, serviceName: "MyApp", sender: person, attachments: nil)
+let updatedContent = try request.content.updating(from: intent)
+contentHandler(updatedContent)
+```
+
+### Notification Service Extension (for E2EE pushes)
+Your push payload arrives encrypted; the NSE decrypts it locally before showing the notification. No server-side plaintext, even in the push pipeline. Signal/iMessage style.
+
+### App Intents (iOS 16+)
+Expose chat actions to Siri / Shortcuts / Spotlight:
+- "Send message to Alice" with on-device intent resolution.
+- "Read my unread messages from Bob".
+- Create custom focus filters: "When I'm in Focus mode 'Family', only allow messages from family group."
+
+```swift
+struct SendMessageIntent: AppIntent {
+    static var title: LocalizedStringResource = "Send a message"
+    static var openAppWhenRun = false
+
+    @Parameter(title: "Recipient")
+    var recipient: ContactEntity
+
+    @Parameter(title: "Message")
+    var message: String
+
+    func perform() async throws -> some IntentResult {
+        await MessageStore.shared.send(message, to: recipient)
+        return .result()
+    }
+}
+```
+
+### Live Activities + Dynamic Island
+- **Ongoing call**: duration counter, mute toggle, end call.
+- **Voice message receiving**: progress bar of the playback.
+- **Group chat with active call**: who's currently talking (avatar in Dynamic Island leading region).
+- **Self-destructing message countdown**: ticking timer in the Dynamic Island.
+
+### Shared with You (iOS 15+)
+When friends send you a link, photo, song, or app via Messages, it appears in the *target* app (Safari Reading List, Photos, Music, App Store) under a "Shared with You" section. To opt your app in for outgoing shares:
+
+```swift
+// In your share/send link logic:
+let metadata = LPLinkMetadata()
+metadata.originalURL = sharedURL
+// ... attach to the Messages share
+```
+
+Conversely, if you build a target app (e.g., a podcast app), you can pull shared content via `SWHighlightCenter` (SharedWithYou framework).
+
+### CryptoKit + Signal Protocol
+- Use `Curve25519.KeyAgreement` for X25519 key exchange.
+- `HKDF` for key derivation.
+- `ChaChaPoly` (or `AES.GCM`) for symmetric encryption.
+- Implement double-ratchet for forward secrecy.
+- **DO NOT roll your own crypto.** Use libsignal-protocol-swift or audit your implementation thoroughly.
+
+### Wallet / PassKit for in-chat payments
+Send money in messages (iMessage Cash pattern): integrate `PKPaymentRequest` and surface a "Send $X to Alice" interactive bubble. Requires Apple Pay merchant entitlements.
+
+### SharePlay (Group Activities)
+Watch a video together, listen to music in sync, edit a doc collaboratively — all within a FaceTime/group chat context. `GroupActivities` framework. Hugely under-utilized by third-party messaging apps.
+
+### App Clips
+Let users join a group chat or accept a friend invite without installing the full app — they tap a link, get a 10MB App Clip, and can chat for a session. Critical for viral growth.
+
+### Translation framework (iOS 17.4+)
+Inline message translation. Long-press a bubble → "Translate" → on-device translation appears beneath. Configure source/target languages per chat in settings.
+
+```swift
+import Translation
+
+struct ChatBubble: View {
+    @State private var configuration: TranslationSession.Configuration?
+    @State private var translatedText: String?
+
+    var body: some View {
+        Text(translatedText ?? message.text)
+            .translationTask(configuration) { session in
+                let response = try await session.translate(message.text)
+                translatedText = response.targetText
+            }
+    }
+}
+```
+
+### Speech framework (on-device, iOS 13+)
+Auto-transcribe voice messages on the receiver's device. Set `recognizer.requiresOnDeviceRecognition = true` for privacy and offline support.
+
+### VisionKit DataScannerViewController
+Scan a QR code to add a contact, join a group, verify safety numbers. Apple's native scanning UI handles all the camera and detection logic.
+
+### TipKit (iOS 17+)
+Discoverability for hidden gestures (swipe-right-to-reply, long-press-to-react, voice-message-lock). Use `TipView` to surface these at the right moment — never on first launch (overwhelming), but after the user has had 5+ conversations.
+
+### Symbol Effects (iOS 17+)
+- `.symbolEffect(.bounce, value: trigger)` on the send arrow when a message lands.
+- `.symbolEffect(.pulse)` on the typing indicator.
+- `.symbolEffect(.variableColor)` on the recording mic for a chasing-light effect.
+
+### Background URL Session for media
+Voice messages, images, videos sometimes need to upload while the user backgrounds the app. Use `URLSessionConfiguration.background(withIdentifier:)` to keep transfers alive. Particularly important for long voice messages (30s+) and HD video.
+
+### LinkPresentation for rich previews
+Auto-generate rich link previews in bubbles using `LPLinkView` + `LPMetadataProvider`. Cache aggressively (LRU of ~200 entries).
+
+### Communication Limits (Screen Time integration)
+For family-friendly apps: integrate `FamilyControls` framework to respect Screen Time communication limits (children can only message approved contacts during certain hours).
+
+### NetworkExtension (for private routing)
+Build a per-app VPN that routes only your messaging traffic through a privacy-preserving relay (Signal/Apple iCloud Private Relay style).
+
+### Spotlight + CSSearchableItem
+Make conversations searchable via system Spotlight. Each chat and recent message becomes a `CSSearchableItem` indexed in Core Spotlight. Users find conversations via the home-screen pull-down search.
+
+### Continuity / Handoff
+Start a message on iPhone, finish on Mac. Implement `NSUserActivity` for chat detail views. Critical for cross-device users.
+
+---
+
+## Anti-patterns to avoid
+
+1. **Animating every received message into view.** Users scrolling through 200 messages should not endure 200 spring animations. Only animate the latest message(s) that arrive while the chat is open.
+2. **Showing read receipts by default.** This is a privacy and emotional load you're imposing. Make it opt-in (Signal/Telegram pattern).
+3. **A composer that grows ABOVE 5 lines without scrolling.** It eats the conversation. Cap at 5 lines, then scroll inside.
+4. **Pull-down to refresh in a chat list.** The chat list updates via push. Pull-down should reveal search.
+5. **A typing indicator that survives forever.** If you see "Alice is typing..." for 2 minutes, the indicator is lying. Auto-hide after 3 seconds of no activity.
+6. **Tying the bubble color to the user's avatar color.** Tempting (looks personalized!) but destroys the WHO-said-WHAT visual hierarchy. Stick with two colors: sent and received.
+7. **Showing every "Alice joined the group" as a regular bubble.** Use a center-aligned system message style — neutral background, secondary text, no avatar.
+8. **Implementing custom call UI instead of CallKit.** Apple will reject the app. Just use CallKit.
+9. **Notification banners that say "New message" without the contents.** Either show the actual message (with sensible privacy settings) or use Communication Notifications to show "Alice" with their avatar. "New message" is useless.
+10. **Bringing up a full-screen modal for emoji picking.** The keyboard is sacred. Reactions and stickers should appear ABOVE the keyboard or in a partial sheet — never replace the conversation view entirely.
+
+---
+
+## Privacy & safety
+
+Messaging apps have an outsized responsibility for user safety. Bake these in from day one:
+
+- **Block & report**: long-press a chat in the list → Block. The blocked user can't message you, can't see your online status, and gets a generic "unable to deliver" if they try.
+- **Verify contact**: safety-number / QR verification for E2EE chats.
+- **Screenshot detection** in sensitive conversations (view-once, ephemeral). Notify the other party.
+- **Auto-delete** as a chat-level toggle.
+- **Hidden chats** (PIN-protected): a folder of chats requiring biometric auth to view. Telegram's "Secret Chats" pattern.
+- **Disappearing media metadata**: strip EXIF, location, device info from photos/videos before sending. NEVER ship a feature where a user might unintentionally share their home GPS.
+- **Photo proof** (optional): cryptographic provenance for photos sent in-chat (Content Authenticity Initiative, C2PA).
+- **Communication Safety** (iOS 17+): use the system API to blur sensitive images for minor accounts.
+
+---
+
+## Performance bar
+
+Anything below these numbers is unacceptable for a chat app shipping in 2026:
+
+| Metric | Bar |
+| --- | --- |
+| Cold-start to chat list | ≤ 700ms |
+| Tap chat → conversation visible & scrollable | ≤ 200ms |
+| Tap send → bubble appears in conversation | ≤ 50ms (optimistic) |
+| Receive push → message visible in app | ≤ 400ms when app is foregrounded |
+| Voice message recording latency (press → mic active) | ≤ 80ms |
+| Scroll FPS in conversation | 60fps (120fps on ProMotion) |
+| Memory in a 10k-message conversation | < 200MB |
+| Push payload size (E2EE) | < 4KB |
+
+Profile with Instruments: especially **SwiftUI** template for view-update churn, **Network** for RTT and payload sizes, **Animation Hitches** for jank.
+
+---
+
+## Implementation checklist for a new chat app
+
+- [ ] **Chat list** with avatar, title, last message, timestamp, unread badge, swipe actions.
+- [ ] **Conversation view** with grouped bubbles, tails, avatars on received-only-last-of-group.
+- [ ] **Composer** with auto-growing input, attachment +, mic ↔ send swap, keyboard tracking.
+- [ ] **Send animation** with optimistic UI + retry on failure.
+- [ ] **Receive** with subtle entry animation and `.soft` haptic.
+- [ ] **Reactions** via long-press → reaction pill → tap to apply.
+- [ ] **Context menu** with Reply, Copy, Forward, Pin, Delete, Edit (15min window).
+- [ ] **Swipe-right to reply** with haptic + reply chip in composer.
+- [ ] **Voice messages**: hold-to-record, slide-to-cancel, slide-up-to-lock, live waveform, playback bubble with scrub.
+- [ ] **Typing indicator** with 3-dot animation, 2.5s timeout.
+- [ ] **Read receipts** (off by default, with privacy tiers).
+- [ ] **Presence** (online / last-seen / status).
+- [ ] **Group chat creation**: pick people, customize, emoji avatar, color.
+- [ ] **CallKit** integration for audio/video.
+- [ ] **PushKit** for VoIP push.
+- [ ] **Notification Service Extension** for E2EE decryption + Communication Notifications avatars.
+- [ ] **CryptoKit / Signal protocol** for E2EE.
+- [ ] **Live Activity** for ongoing calls + receiving voice messages.
+- [ ] **App Intents** for Siri integration ("Send message to X").
+- [ ] **Translation framework** for inline translation.
+- [ ] **Speech framework** for voice-message transcription.
+- [ ] **Shared with You** for outgoing links/media.
+- [ ] **Reduce Motion** alternative paths for all spring animations.
+- [ ] **Dynamic Type** support across all text.
+- [ ] **Reduce Transparency** opaque background variants.
+- [ ] **Increase Contrast** higher-contrast borders and text.
+- [ ] **VoiceOver** accessibility labels on every interactive element.
+- [ ] **Reachable** for one-handed use (chat list cells reachable in iPhone Pro Max range).
+- [ ] **Privacy**: block, report, auto-delete, ephemeral, view-once, EXIF stripping.
+
+---
+
+## Final principles
+
+1. **The composer is the product.** Everything else is supporting cast.
+2. **Optimistic UI is mandatory.** Show the bubble before the network responds. Reconcile later.
+3. **Bubbles tell a story.** Grouping, spacing, and tail placement carry as much meaning as the text.
+4. **Reactions over replies.** A reaction is 10× faster than typing back. Make them effortless.
+5. **Latency is intimacy.** A message that arrives 100ms faster feels 10× more "alive". Optimize the read path.
+6. **Privacy is a feature.** Read receipts off by default. Ephemeral built-in. Encryption visible.
+7. **Respect the keyboard.** It's the user's primary input. Never push it around or replace it lightly.
+
+The benchmark: a user opens your chat app to send a quick message and finds themselves typing in < 1 second from tap, watching the bubble fly into the conversation, and putting their phone down. They don't remember what your app looks like — only that they felt heard. That's the goal.

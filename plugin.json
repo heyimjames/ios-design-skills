@@ -1,0 +1,36 @@
+{
+  "name": "ios-design-skills",
+  "version": "1.0.0",
+  "description": "Four detailed design-engineering skills for building best-in-class native iOS/SwiftUI apps — camera & photos, chat & messaging, interaction primitives (widgets/Live Activities/Dynamic Island/haptics), and the final 5% of polish.",
+  "author": {
+    "name": "James Frewin"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ios",
+    "swift",
+    "swiftui",
+    "design-engineering",
+    "polish",
+    "claude-code",
+    "skills"
+  ],
+  "skills": [
+    {
+      "name": "ios-camera-and-photos-design",
+      "path": "skills/camera-and-photos/SKILL.md"
+    },
+    {
+      "name": "ios-chat-and-messaging-design",
+      "path": "skills/chat-and-messaging/SKILL.md"
+    },
+    {
+      "name": "ios-interaction-primitives-design",
+      "path": "skills/interaction-primitives/SKILL.md"
+    },
+    {
+      "name": "ios-the-final-5-percent",
+      "path": "skills/the-final-5-percent/SKILL.md"
+    }
+  ]
+}

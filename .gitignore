@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+._*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local
+.env
+.env.local
+
+# Note: dist/ IS committed so users can `git clone` and install immediately
+# without running ./build.sh. If you change skills, run ./build.sh and commit
+# the regenerated dist/ files alongside.

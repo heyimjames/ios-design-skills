@@ -1,0 +1,1126 @@
+---
+description: Design and build best-in-class native iOS interaction surfaces — Home Screen widgets, Lock Screen widgets, StandBy widgets, Live Activities, Dynamic Island presentations, Control Center custom controls, Haptic Touch context menus, haptic feedback (UIFeedbackGenerator and CoreHaptics), Action Button, Camera Control button, App Intents, Symbol Effects, and Focus filters. Use this skill whenever the user is building or polishing any of these peripheral surfaces that surround a native iOS app, especially for apps targeting iOS 17, iOS 18, or iOS 26 (Liquid Glass). Triggers on: widget, WidgetKit, TimelineProvider, Home Screen widget, Lock Screen widget, StandBy widget, interactive widget, widget toggle, widget button, App Intent, AppIntent, ControlWidget, Control Center widget, ControlWidgetButton, ControlWidgetToggle, Live Activity, ActivityKit, Dynamic Island, compact presentation, expanded presentation, minimal presentation, lock screen presentation, ActivityAttributes, Live Activity push, push token update, Communication Notifications, Haptic Touch, long press, context menu, UIContextMenuInteraction, peek and pop, 3D Touch, haptic feedback, UIImpactFeedbackGenerator, UISelectionFeedbackGenerator, UINotificationFeedbackGenerator, CoreHaptics, CHHapticEngine, CHHapticPattern, CHHapticEvent, AHAP, custom haptic, haptic AHAP, Action Button, Camera Control, half press, full press, Symbol Effects, symbolEffect, bounce, pulse, variableColor, Focus filters, FocusFilterIntent, sensitive content analysis, Live Text, App Shortcuts, Siri Shortcuts, iOS 26, Liquid Glass widget, glassEffect.
+globs: ["**/Widget*.swift", "**/*Widget*.swift", "**/LiveActivity*.swift", "**/*LiveActivity*.swift", "**/Activity*.swift", "**/AppIntent*.swift", "**/*Intent*.swift", "**/Haptic*.swift", "**/*Haptic*.swift", "**/ControlWidget*.swift"]
+alwaysApply: false
+---
+
+# iOS Interaction Primitives — Design Engineering Skill
+
+A taste guide for the *peripheral* surfaces that surround a native iOS app — the Home Screen widget, the Dynamic Island, the haptic pulse on a button press. These are not afterthoughts. For many users, these surfaces are the *primary* product. Spotify's widget gets opened 50× more often than the app. Flighty's Dynamic Island is more memorable than Flighty's main screen.
+
+## Philosophy
+
+> The app is the universe. The widget is the planet you see from your bed.
+
+Three rules that govern every primitive in this guide:
+1. **Glanceability is the entire design constraint.** A widget that takes 2 seconds to parse is broken. Lock-Screen widgets get 0.4 seconds of attention. Dynamic Island gets less. Design for the half-second.
+2. **One App Intent, many surfaces.** Since iOS 17, the same `AppIntent` powers Home widgets, Lock widgets, StandBy, Control Center, the Action Button, and Siri. Architect your business logic around intents — your peripheral surfaces become near-free.
+3. **Haptics are punctuation, not paragraphs.** They confirm, they don't communicate. The wrong haptic feels like the app yelling. The right haptic feels like the app *agreeing* with you.
+
+The pixel-pushers' rules:
+- **Widgets are content, not chrome.** No "Open in app" buttons, no settings gears, no logos. The data IS the widget.
+- **Live Activities live and die.** Set a `staleDate`. End them within 8 hours. Never leave a stale Activity hanging.
+- **The Dynamic Island is a canvas, not a wallpaper.** No background colors, no images that bleed to the edge — Apple's HIG is explicit: foreground elements only.
+- **Default haptics are not optional.** Every tappable thing in your app should fire a haptic. If you're not sure which, use `.selectionChanged`. It's never wrong.
+
+---
+
+## What this skill covers
+
+| Surface | Framework | Min iOS | Section |
+| --- | --- | --- | --- |
+| Home Screen widgets | WidgetKit + SwiftUI | 14 (16 for Lock, 17 for interactive) | [§1](#1-home-screen-widgets) |
+| Lock Screen widgets | WidgetKit | 16 | [§2](#2-lock-screen-widgets) |
+| StandBy widgets | WidgetKit | 17 | [§3](#3-standby-widgets) |
+| Live Activities (Lock Screen) | ActivityKit | 16.1 | [§4](#4-live-activities) |
+| Dynamic Island | ActivityKit (DynamicIsland) | 16.1 (iPhone 14 Pro+) | [§5](#5-dynamic-island) |
+| Control Center custom controls | WidgetKit (ControlWidget) | 18 | [§6](#6-control-center-custom-controls) |
+| Haptic Touch context menus | UIContextMenuInteraction / `.contextMenu` | 13 | [§7](#7-haptic-touch--context-menus) |
+| UIFeedbackGenerator haptics | UIKit | 10 | [§8](#8-haptic-feedback-the-easy-90) |
+| Core Haptics (custom patterns) | CoreHaptics | 13 | [§9](#9-core-haptics-the-delightful-10) |
+| Action Button | App Intents | 17 (iPhone 15 Pro+) | [§10](#10-action-button-iphone-15-pro) |
+| Camera Control button | AVFoundation | 18 (iPhone 16/16 Pro) | [§11](#11-camera-control-button-iphone-16) |
+| Symbol Effects | SwiftUI | 17 | [§12](#12-symbol-effects) |
+| Focus filters | AppIntents | 16 | [§13](#13-focus-filters) |
+
+---
+
+## Reference apps to study
+
+Premium examples of each surface, with Mobbin citations:
+
+| App | What to learn | Mobbin |
+| --- | --- | --- |
+| **Flighty** | Best-in-class Dynamic Island for flight tracking — compact (countdown), expanded (full status), live updates throughout journey | [Flighty Dynamic Island](https://mobbin.com/screens/cfd5bf7f-efe2-4a72-a8ba-84302dc5c331), [delay state](https://mobbin.com/screens/0c6d9f54-f050-488d-92d4-c0fbeeed6901) |
+| **FocusFlight** | Lock Screen Live Activity for flights — large rectangular widget with route/ETA/timezone, never feels cluttered | [FocusFlight LA](https://mobbin.com/screens/54d63fe8-f924-436c-9071-c63038dbefb6) |
+| **Runbuds** | Workout Live Activity — distance, pace, time with red accent, no chrome | [Runbuds DI](https://mobbin.com/screens/4902bd7a-b3c6-473a-a9c0-af8be91ff5b4), [Lock Screen](https://mobbin.com/screens/8ebcad43-ccca-4a8e-81c2-70a0496a0393) |
+| **Moonlitt / Sunlitt** | Beautiful gradient-backed Lock Screen widgets for moon/sun phases — content as art | [Moonlitt Lock](https://mobbin.com/screens/cee3304b-1709-427f-8ac4-7df615080050), [Sunlitt Golden Hour](https://mobbin.com/screens/dfe1dd5e-2194-45d0-bd1c-72484fc92956) |
+| **Duolingo** | Streak widget on Lock Screen + Dynamic Island variants — emotional hook (the sad owl when streak is in danger) | [Streak widget](https://mobbin.com/screens/c78046b1-5d17-4225-ad76-2d66a72ac8bd) |
+| **Yazio** | Lock Screen Live Activity for tracking meals — 4 ring meters in one strip | [Yazio Lock Screen](https://mobbin.com/screens/4bc38d1d-5a05-4e0a-8939-352891988c19) |
+| **Transit** | Real-time bus arrival Live Activity — countdown with route color | [Transit Lock](https://mobbin.com/screens/b84f786b-1c21-4110-9977-f0544d9adcf5) |
+| **MyFitnessPal / Yazio / Alma / GO Club** | Interactive widgets for logging water, calories, steps — tap to log without opening the app | [MFP Water widget](https://mobbin.com/screens/f74772bf-95d0-4a91-8e2d-56d33a77508e), [Alma Carrot](https://mobbin.com/screens/fe23c4a3-b043-432c-aa9f-9bb4db519889) |
+| **TIDE / Tolan** | Minimal Dynamic Island for ambient apps (timers, AI characters) | [TIDE](https://mobbin.com/screens/4d286ed5-f515-4bd7-aa63-2bb579b8030b), [Tolan Lock Screen](https://mobbin.com/screens/a0693172-1a6d-4e4b-80b9-f8a29980cc4f) |
+| **Apple Music / Maps / Timer** | The system standard for Live Activities. Study them on your device — they're the bar. | (use your device) |
+
+---
+
+## 1. Home Screen widgets
+
+Widgets are SwiftUI views rendered by the system from your `TimelineProvider`. They cannot animate continuously; they redraw at intervals you specify.
+
+### Sizing
+
+| Size | Use case |
+| --- | --- |
+| `.systemSmall` (2×2 grid) | A single number / status (steps today, weather temp, streak count) |
+| `.systemMedium` (4×2) | A title + 1–2 supporting data points, OR a horizontal bar chart |
+| `.systemLarge` (4×4) | A list of items (up next 3 calendar events, top 5 tasks) |
+| `.systemExtraLarge` (iPad only) | A dashboard view |
+| `.accessoryCircular`, `.accessoryRectangular`, `.accessoryInline` | Lock Screen and StandBy widgets |
+
+### Layout grid
+
+- 22pt margins inside `.systemSmall` and `.systemMedium`.
+- 24pt margins inside `.systemLarge`.
+- 8pt content gap (between title and primary data).
+- Corner radius: handled by the system. Use `ContainerRelativeShape()` to follow the widget's outer shape for inner elements (cards, backgrounds).
+
+```swift
+RoundedRectangle(cornerRadius: 22, style: .continuous) // ❌ Wrong
+ContainerRelativeShape()                                // ✅ Right
+```
+
+### Typography for widgets
+
+The single most common widget mistake: text too small to read at arm's length. Bars:
+
+| Element | Font | Weight | Size |
+| --- | --- | --- | --- |
+| Hero number | SF Pro Rounded | `.bold` | 36pt (small) / 48pt (medium) / 64pt (large) |
+| Hero label | SF Pro | `.semibold` | 13pt |
+| Supporting metric | SF Pro | `.medium` | 15pt |
+| Caption / timestamp | SF Pro | `.regular` | 11pt |
+
+Always set `.minimumScaleFactor(0.7)` on hero numbers to handle internationalization gracefully (12,345 km is wider than 1.2 mi).
+
+### Refresh cadence
+
+Widgets are NOT push-driven. The system reads your timeline.
+
+- Budget: roughly 40–70 reloads per day across all your widgets per device.
+- For frequent updates, return a longer timeline (e.g., 24 entries spaced 1 hour apart) so the system has data to render between actual reloads.
+- For sparse updates (e.g., delivery tracking that changes 4 times a day), use `WidgetCenter.shared.reloadTimelines(ofKind:)` from the app or a background task.
+
+```swift
+struct CoffeeWidgetProvider: TimelineProvider {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<CoffeeEntry>) -> Void) {
+        let entries = generateNextHourEntries() // 12 entries, 5min apart
+        let timeline = Timeline(entries: entries, policy: .after(Date().addingTimeInterval(3600)))
+        completion(timeline)
+    }
+}
+```
+
+### Interactive widgets (iOS 17+)
+
+The killer feature. Same `AppIntent` powers widget buttons, Control Center, Action Button, Siri.
+
+**Anatomy:**
+- `Button(intent:)` or `Toggle(isOn:intent:)` — these render as SwiftUI controls and execute the intent in the background.
+- The intent's `perform()` runs in the WIDGET extension's process, not your app's. Share data via App Groups.
+- After the intent runs, the widget timeline refreshes — your UI updates with the new state.
+
+```swift
+import WidgetKit
+import SwiftUI
+import AppIntents
+
+struct LogWaterIntent: AppIntent {
+    static var title: LocalizedStringResource = "Log a glass of water"
+
+    @Parameter(title: "Amount (ml)")
+    var amount: Int
+
+    func perform() async throws -> some IntentResult {
+        await WaterStore.shared.log(amount: amount) // shared via App Group
+        return .result()
+    }
+}
+
+struct WaterWidgetView: View {
+    let entry: WaterEntry
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "drop.fill").foregroundStyle(.blue)
+                Text("Water").font(.system(size: 13, weight: .semibold))
+            }
+            Text("\(entry.totalToday) ml")
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .contentTransition(.numericText(value: Double(entry.totalToday)))
+            Button(intent: LogWaterIntent(amount: 250)) {
+                Label("+250 ml", systemImage: "plus")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+        }
+        .containerBackground(.fill.tertiary, for: .widget)
+    }
+}
+```
+
+**Animation in widgets**: limited but lovely.
+- `.contentTransition(.numericText(value:))` — rolls digits like an odometer when numbers change.
+- `.contentTransition(.symbolEffect)` — bounces SF Symbols on state change.
+- `withAnimation` works inside intent callbacks — the system animates the diff between widget states.
+
+### iOS 26 Liquid Glass widgets
+
+iOS 26 widgets adopt the Liquid Glass material. To opt in:
+- Set `.containerBackground(.fill.tertiary, for: .widget)` — the system picks the right material per context.
+- Use `.widgetAccentable()` on elements you want tinted in Accent rendering mode (the user can choose between Auto / Accent / Light / Dark tint per widget).
+- Avoid hardcoded colors for backgrounds; use semantic system colors so they adapt.
+- For dark accent on light wallpaper / vice versa, use `.foregroundStyle(.primary)` and let the system handle contrast.
+
+```swift
+Text("\(entry.steps)")
+    .font(.system(size: 48, weight: .bold, design: .rounded))
+    .widgetAccentable() // gets tinted in Accent mode
+```
+
+### Anti-patterns
+- **Don't put a "Open App" button.** Tap-anywhere-to-open is automatic. Buttons should DO things.
+- **Don't fill the widget with chrome.** Top label + giant data point + maybe one secondary element. That's it.
+- **Don't update a sleeping widget.** If nothing's changed, return a long-tail timeline. Updating just to update wastes the budget.
+- **Don't use thin fonts.** SF Pro Light at any size looks fine on a high-DPI display in your editor and unreadable on a Lock Screen at arm's length.
+
+---
+
+## 2. Lock Screen widgets
+
+Three sizes, all monochrome, all tiny. Treat them as iconography, not data viz.
+
+| Family | Size | Use case |
+| --- | --- | --- |
+| `.accessoryCircular` | ~76 × 76pt rendered | A single number, a gauge, a progress ring |
+| `.accessoryRectangular` | ~160 × 76pt rendered | A title + one line of supporting info |
+| `.accessoryInline` | Single text line beside time | "Coffee: 3 cups", "Next: Sam 14:30" |
+
+### Visual language
+
+Lock Screen widgets render in **tint mode** by default — flat single-color silhouettes (the user's chosen tint). You can render in **full color** by setting `.widgetRenderingMode(.fullColor)` but this is rarely the right call — full color photos on the Lock Screen look out of place and Apple actively discourages it.
+
+Design rules:
+- **Use SF Symbols** for icons (they tint correctly).
+- **Use Gauge** for progress (built-in, looks native).
+- **NO drop shadows or gradients** in tint mode — they're flattened to a single color and look weird.
+- **Use `.privacySensitive()`** on data you don't want shown when the device is locked (Apple Watch only honors this currently, but it's good practice).
+
+```swift
+struct StreakLockWidget: View {
+    let entry: StreakEntry
+    var body: some View {
+        VStack {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 18))
+            Text("\(entry.days)")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .contentTransition(.numericText())
+            Text("days").font(.system(size: 9))
+        }
+    }
+}
+```
+
+### Tap behavior
+
+Tapping a Lock-Screen widget opens the app to a specific destination. Use `widgetURL`:
+
+```swift
+WaterLockWidgetView(entry: entry)
+    .widgetURL(URL(string: "myapp://water/today")!)
+```
+
+OR — in iOS 17+ — make the entire widget a `Button(intent:)`. The intent fires, the app does NOT open. Use this for "increment my coffee count from the Lock Screen" UX.
+
+---
+
+## 3. StandBy widgets
+
+When iPhone is plugged in and on its side (iOS 17+), it enters StandBy mode. Your widget appears in a special context: nighttime-friendly, glanceable from across a room.
+
+- StandBy uses `.systemSmall` widgets by default in a stacked carousel.
+- At night, the system shifts to **Red Tint mode** automatically — your widget gets a red monochrome rendering. SF Symbols and text re-tint correctly; gradient/photo backgrounds get clipped.
+- Always design the small widget to look great at 6 feet away. That's the test.
+
+Design rules for StandBy:
+- Hero number ≥ 56pt.
+- High contrast — white on black, or your accent on dark.
+- No interactive buttons in StandBy (taps just open the app).
+- Test red-tint mode! Most apps haven't and look terrible.
+
+---
+
+## 4. Live Activities
+
+Live Activities display real-time data on the Lock Screen and Dynamic Island. They survive in the system for up to 8 hours (with caveats — iOS 17.2+ allows extension).
+
+### When to use them
+
+✅ Sports score in progress
+✅ Food delivery / rideshare ETA
+✅ Workout in progress
+✅ Timer / Pomodoro
+✅ Flight tracker
+✅ Audio call / FaceTime
+✅ Long-running export / upload
+
+❌ Background processes the user doesn't care about minute-to-minute
+❌ Daily check-ins ("Don't forget your meditation!")
+❌ Marketing / promotions
+❌ "Hey, look at me!" — be a tool, not a billboard
+
+### Anatomy
+
+You define:
+1. `ActivityAttributes` — static info that doesn't change (e.g., "Flight DL 412 SFO → JFK").
+2. `ContentState` — dynamic info that updates (e.g., gate, delay status, ETA).
+3. **Four presentations**:
+   - **Lock Screen** (large rectangular widget on Lock Screen + Notification Center)
+   - **Dynamic Island compact** (leading + trailing islands when only your activity is showing)
+   - **Dynamic Island expanded** (when user touches and holds the Island)
+   - **Dynamic Island minimal** (a tiny icon when multiple activities are competing)
+
+```swift
+struct FlightAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var status: FlightStatus  // boarding, departed, in-flight, landed
+        var minutesRemaining: Int
+        var gate: String?
+    }
+    var flightNumber: String
+    var origin: String
+    var destination: String
+}
+
+struct FlightLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: FlightAttributes.self) { context in
+            // Lock Screen presentation
+            FlightLockView(context: context)
+        } dynamicIsland: { context in
+            DynamicIsland {
+                // Expanded
+                DynamicIslandExpandedRegion(.leading) { ... }
+                DynamicIslandExpandedRegion(.trailing) { ... }
+                DynamicIslandExpandedRegion(.bottom) { ... }
+            } compactLeading: {
+                Image(systemName: "airplane")
+            } compactTrailing: {
+                Text(context.state.minutesRemaining, format: .number) + Text("m")
+            } minimal: {
+                Image(systemName: "airplane")
+            }
+            .keylineTint(.green) // border tint
+        }
+    }
+}
+```
+
+### Lock Screen Live Activity design
+
+- Max height: ~160pt (the system gives you up to this; respect it).
+- Layout in tiers:
+  - **Top row**: app icon (left) + title + status pill (right). 24pt height.
+  - **Middle**: the hero content. A route map, a giant timer, a progress bar.
+  - **Bottom row**: secondary info — gate, ETA, delta vs schedule. 20pt height.
+- Use `.activityBackgroundTint(.black)` for the background or let it inherit the Lock Screen wallpaper context.
+- Honor Dynamic Type via `.body`, `.caption`, etc.
+
+**Flighty's lock-screen activity** is the reference. Study it.
+
+### Updating from your server
+
+Live Activities can be push-updated. Get the push token after starting the activity:
+
+```swift
+let activity = try Activity<FlightAttributes>.request(
+    attributes: ...,
+    content: .init(state: ..., staleDate: Date().addingTimeInterval(4 * 3600)),
+    pushType: .token
+)
+
+Task {
+    for await tokenData in activity.pushTokenUpdates {
+        let tokenHex = tokenData.map { String(format: "%02x", $0) }.joined()
+        await uploadToken(tokenHex, for: activity.id)
+    }
+}
+```
+
+Then send pushes via APNs to `push-type: liveactivity`.
+
+**Best-practice cadence**: update only when something *changed enough to notice*. For a flight: every 10 minutes during pre-boarding, every 2 minutes during taxi/approach. For a ride-share: every 30s while in transit. For audio playing: 5–10s.
+
+### staleDate
+
+Set `staleDate` aggressively. After this date, your activity becomes visually "stale" (slightly desaturated) until the next update. Users hate seeing 2-hour-old data presented as live.
+
+### Ending Live Activities
+
+```swift
+await activity.end(
+    ActivityContent(state: finalState, staleDate: nil),
+    dismissalPolicy: .after(Date().addingTimeInterval(60))
+)
+```
+
+Three dismissal options:
+- `.immediate`: removes from UI immediately.
+- `.default`: keeps for ~4 hours after ending (user can swipe away).
+- `.after(date)`: keeps until specified date (max 4 hours).
+
+For "you've arrived" / "your timer's done" → `.after(now + 60s)` so the user sees the end state, then it disappears.
+
+---
+
+## 5. Dynamic Island
+
+The Dynamic Island is a *canvas of foreground elements floating around the TrueDepth camera*. Apple's HIG is explicit: **no background colors, no images that bleed.**
+
+### Three presentations
+
+**Compact** (the default when only your activity is live):
+- Two regions: **leading** (left of camera) and **trailing** (right of camera).
+- Each region max ~50pt wide.
+- Use a single icon + ≤ 5 characters of text per side.
+- Leading: usually an icon representing the activity (airplane, fork, timer).
+- Trailing: the most-glanceable data point (countdown, ETA, score).
+
+**Minimal** (when multiple activities compete, or yours isn't most active):
+- A SINGLE element — usually a 22 × 22pt icon.
+- Two minimal activities show side by side, one "attached" to the Island, one floating just below it.
+
+**Expanded** (when user touches-and-holds the Island):
+- Four regions: `.leading`, `.trailing`, `.center`, `.bottom`.
+- This is where you can show rich content: a map, progress rings, multiple lines of text, controls.
+- Max height: ~200pt.
+- **You CAN have buttons here** (interactive Live Activities, iOS 17+) — `Button(intent:)` etc.
+
+### Design rules (these are not optional)
+
+From Apple's HIG:
+1. **No background colors.** The Island IS your background.
+2. **No images that touch the edges.** Inset all visual elements with ≥ 4pt padding.
+3. **No buttons in compact or minimal.** Interactive elements only in expanded.
+4. **Use `.keylineTint(...)`** to add a subtle 1pt border tint around the entire Island — this is the ONLY chrome you get for branding. Use it sparingly.
+5. **Honor sensitivity:** if the user has Reduce Motion on, skip transitions; if Reduce Transparency, you don't need to change anything (the Island is opaque already).
+
+### Animation between states
+
+Transitions between content states are automatic. To make them beautiful:
+- Use `.contentTransition(.numericText())` for changing numbers — they roll like an odometer.
+- Use `.symbolEffect(.bounce)` for SF Symbols that change.
+- Use `.transition(.opacity)` for swappable views.
+- **Avoid complex layout changes** between updates — the system animates between two snapshots, and big layout deltas look choppy.
+
+### Compact → Expanded transition
+
+When the user long-presses the Island, the system runs a smooth morph from compact to expanded. You DON'T animate this — the system does. Your job is to make the two views *related enough* that the morph feels natural. Keep iconography consistent. Keep colors consistent.
+
+### Minimal presentation
+
+When two activities compete, your activity might be shown minimal. Test this. Many apps look great in compact and weird in minimal because the icon they chose doesn't read at 22pt.
+
+### Real-world examples to study (Mobbin)
+
+- **Flighty** — compact: airplane icon + countdown. The countdown turns red as you approach departure. [→](https://mobbin.com/screens/cfd5bf7f-efe2-4a72-a8ba-84302dc5c331)
+- **FocusFlight** — full Lock Screen activity with origin/destination/route line. [→](https://mobbin.com/screens/54d63fe8-f924-436c-9071-c63038dbefb6)
+- **Runbuds** — compact: running figure + distance. Lock Screen: distance / time / pace in three big rows. [→](https://mobbin.com/screens/4902bd7a-b3c6-473a-a9c0-af8be91ff5b4)
+- **TIDE** — minimal-style breathing visualization. Look at how restrained it is. [→](https://mobbin.com/screens/4d286ed5-f515-4bd7-aa63-2bb579b8030b)
+
+---
+
+## 6. Control Center custom controls
+
+New in iOS 18. Control Center now hosts custom `ControlWidget`s — the same App Intent architecture as widgets.
+
+### Two types
+
+**`ControlWidgetButton`**: a one-shot tap action.
+```swift
+struct StartTimerControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "com.app.startTimer") {
+            ControlWidgetButton(action: StartTimerIntent()) {
+                Label("Start Timer", systemImage: "timer")
+            }
+        }
+        .displayName("Start Timer")
+        .description("Quickly start a 25-minute timer.")
+    }
+}
+```
+
+**`ControlWidgetToggle`**: a state with on/off.
+```swift
+ControlWidgetToggle(
+    "Focus Mode",
+    isOn: focusEnabled,
+    action: ToggleFocusIntent()
+) { isOn in
+    Label(isOn ? "Focus On" : "Focus Off",
+          systemImage: isOn ? "moon.fill" : "moon")
+}
+```
+
+### Where Controls appear
+
+- **Control Center** (the user adds them via the redesigned Control Center).
+- **Lock Screen** (bottom corners — replace flashlight/camera).
+- **Action Button** (user can assign your control to it).
+
+This is the magic: ONE intent, ONE control declaration, THREE surfaces. iOS 26 even adds them to the home screen widget surface as a "small action" style.
+
+### Visual design
+
+Controls inherit a system-rendered chrome (rounded rectangle, system material background). You provide:
+- A `Label` with `Image(systemName:)` + text.
+- Optionally, a `controlWidgetActionHint(...)` for accessibility.
+- For toggles: separate visual states for on/off (different icon, optionally different color).
+
+Use SF Symbols. Custom icons can be embedded via asset catalog with `Image("MyCustomIcon")`, but SF Symbols render correctly across all surfaces (full color, tinted, monochrome).
+
+---
+
+## 7. Haptic Touch & context menus
+
+**Note**: 3D Touch was deprecated in iOS 13. Modern devices use **Haptic Touch** — a long-press with haptic feedback. The API surface is `UIContextMenuInteraction` (UIKit) or `.contextMenu { ... }` (SwiftUI).
+
+### Timing
+
+- Default long-press duration: **0.5 seconds** (system standard).
+- For chat reactions, FAST: **0.4 seconds** (iMessage).
+- For destructive contexts, SLOW: **0.7 seconds** (e.g., long-press to enter delete mode).
+
+You can't change the system's long-press threshold globally, but you can use a custom `LongPressGesture(minimumDuration:)` for in-app gestures.
+
+### The Haptic Touch interaction
+
+When the user touches and holds an element:
+1. **0–500ms**: nothing happens visually. The element is "loading" the menu.
+2. **500ms**: haptic `.medium` impact fires, the element subtly scales to 0.97 (signaling "menu coming").
+3. **520ms**: the rest of the screen blurs (`.systemUltraThinMaterial` background), the element scales back to 1.02 and lifts (slight shadow), the context menu appears with a stagger animation.
+4. **Release on menu item**: haptic `.medium`, item highlights, action fires.
+5. **Release outside menu**: haptic `.soft`, menu dismisses.
+
+The system handles ALL of this for you when you use the standard APIs.
+
+### SwiftUI implementation
+
+```swift
+PhotoCell(image: photo)
+    .contextMenu {
+        Button("Save", systemImage: "square.and.arrow.down") {
+            save(photo)
+        }
+        Button("Share", systemImage: "square.and.arrow.up") {
+            share(photo)
+        }
+        Divider()
+        Button("Delete", systemImage: "trash", role: .destructive) {
+            delete(photo)
+        }
+    } preview: {
+        // Optional: full-size preview that appears while menu is shown
+        Image(uiImage: photo.fullSize)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(maxWidth: 300, maxHeight: 400)
+    }
+```
+
+The `preview` closure is a fantastic discoverability trick — long-pressing a small thumbnail shows a giant preview while the menu is shown. Apple Photos does this with photos in the library.
+
+### Custom context menu animations (iMessage / Telegram style)
+
+For maximum control over the animation (like iMessage's bubble-lift-and-reaction-pill), implement `UIContextMenuInteraction` manually:
+
+```swift
+let interaction = UIContextMenuInteraction(delegate: self)
+bubbleView.addInteraction(interaction)
+
+// In the delegate:
+func contextMenuInteraction(_ interaction: UIContextMenuInteraction,
+                            configurationForMenuAtLocation location: CGPoint)
+    -> UIContextMenuConfiguration? {
+    return UIContextMenuConfiguration(identifier: nil) {
+        // Preview view — can be nil for no preview
+        nil
+    } actionProvider: { _ in
+        let reply = UIAction(title: "Reply", image: UIImage(systemName: "arrowshape.turn.up.left")) { _ in ... }
+        let copy  = UIAction(title: "Copy", image: UIImage(systemName: "doc.on.doc")) { _ in ... }
+        let delete = UIAction(title: "Delete", image: UIImage(systemName: "trash"),
+                              attributes: .destructive) { _ in ... }
+        return UIMenu(children: [reply, copy, delete])
+    }
+}
+```
+
+For TRULY custom presentations (the reaction picker pill above the bubble), you'll need to manage the animation yourself outside `UIContextMenuInteraction` and use a `UIWindow` overlay. iMessage and Telegram do this — it's significant work.
+
+### When NOT to use a context menu
+
+- **Don't use context menus as the ONLY way to access a feature.** They're discoverability hell. Mirror the actions in a visible UI somewhere.
+- **Don't put more than 6 items.** Cognitive overload. If you have 10 actions, group them or use a sheet.
+- **Don't nest more than 1 level of submenus.** Users get lost.
+- **Don't use them on items that are also tap-actionable in confusing ways.** Tapping a tweet opens it; long-pressing should reveal MORE actions, not the same one.
+
+---
+
+## 8. Haptic feedback — the easy 90%
+
+`UIFeedbackGenerator` covers the vast majority of cases. Memorize this table:
+
+| Generator | Styles | When |
+| --- | --- | --- |
+| `UIImpactFeedbackGenerator` | `.light` | Light touches, button taps, selection of light/inert items |
+| | `.medium` | Standard tap on a meaningful control |
+| | `.heavy` | Critical actions, slammed-into-place events |
+| | `.soft` | (iOS 13+) Even softer than `.light` — perfect for ambient feedback like scrolling detents |
+| | `.rigid` | (iOS 13+) Sharp click — perfect for ratchets, dial detents, toggle switches |
+| `UISelectionFeedbackGenerator` | (single style) | Picker/scroll-wheel changes, segmented control changes, ANY selection change in a scrollable list |
+| `UINotificationFeedbackGenerator` | `.success` | Task completed successfully (saved, sent, posted) |
+| | `.warning` | About-to-be-destructive (delete confirmation) |
+| | `.error` | Failed action (login wrong, network error) |
+
+### The two rules of UIFeedbackGenerator
+
+**Rule 1: `prepare()` BEFORE you'll need it.**
+
+Without prepare, the haptic engine spins up on first fire, adding ~50ms latency. With prepare, latency is < 5ms. You'll hear the difference.
+
+```swift
+private let lightImpact = UIImpactFeedbackGenerator(style: .light)
+
+func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    lightImpact.prepare() // warm up
+}
+
+func buttonTapped() {
+    lightImpact.impactOccurred() // fires in < 5ms
+}
+```
+
+**Rule 2: A generator stays "warm" for ~2 seconds after `prepare()`.**
+
+If you `prepare()` then wait 3 seconds before firing, you're back to cold. For continuous interactions (a slider you'll be firing every 100ms), call `prepare()` after each `.impactOccurred()` to keep it warm.
+
+### Haptic intensity (iOS 13+)
+
+`UIImpactFeedbackGenerator` supports `.impactOccurred(intensity: 0.5)` — values 0.0 to 1.0. Map this to gesture velocity for natural-feeling drag-snap interactions.
+
+```swift
+// Velocity-mapped haptic during a scrub gesture
+let v = abs(scrubVelocity) / maxVelocity // 0…1
+impactGen.impactOccurred(intensity: 0.3 + v * 0.7) // 0.3 floor, scales to 1.0
+```
+
+### Common haptic anti-patterns
+
+❌ Firing haptics on EVERY scroll event. The result feels like a vibrating phone.
+✅ Fire on detents, breakpoints, or thresholds — the "ticks" the user is aware of.
+
+❌ Using `.heavy` for normal button taps. Feels aggressive.
+✅ Default to `.light` or `.soft`. Reserve `.heavy` for genuinely heavy moments.
+
+❌ Using `.warning` for routine messages. Now users ignore your warnings.
+✅ Reserve `.error` and `.warning` for truly destructive paths.
+
+❌ Forgetting to honor system settings. `UIDevice` does NOT expose a "haptics disabled" setting — but the system respects the user's Sounds & Haptics setting automatically. You don't need to check.
+
+❌ Haptics on cold app launches. The first few seconds the engine is sleeping; haptics will lag.
+
+---
+
+## 9. Core Haptics — the delightful 10%
+
+When `UIFeedbackGenerator` isn't enough — multi-step patterns, audio-synced haptics, intensity envelopes — use `CoreHaptics`. This is what separates premium apps from default apps.
+
+### When to reach for CoreHaptics
+
+- Custom multi-tap patterns (a "chk-chk-chk" film advance, a "thump-thump" heartbeat, a "whoosh-pop" balloon release).
+- Haptics that sync with audio (vocal effects, music drops, sound-effect synchronized hits).
+- Continuous haptics with dynamic intensity (a vehicle's vibration that ramps with speed in a game).
+- Haptic event longer than 1 sec (UIFeedbackGenerator only supports transients).
+
+### Capability check
+
+```swift
+guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
+```
+
+iPhone 8 and later support it. iPads do NOT support haptics (touch on iPad has none). Always degrade gracefully.
+
+### Two event types
+
+- **`hapticTransient`**: a short impulse (~80ms). Has `intensity` (0–1) and `sharpness` (0–1).
+- **`hapticContinuous`**: a sustained vibration up to 30 seconds. Same parameters + `duration`.
+
+### A reusable engine wrapper
+
+Don't recreate the engine for every haptic. Wrap it:
+
+```swift
+import CoreHaptics
+
+final class HapticPlayer {
+    static let shared = HapticPlayer()
+    private var engine: CHHapticEngine?
+
+    init() {
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
+        do {
+            engine = try CHHapticEngine()
+            engine?.stoppedHandler = { _ in /* restart on next play */ }
+            engine?.resetHandler = { [weak self] in try? self?.engine?.start() }
+            try engine?.start()
+        } catch {
+            print("Haptic engine init failed: \(error)")
+        }
+    }
+
+    func play(pattern: CHHapticPattern) {
+        guard let engine else { return }
+        do {
+            let player = try engine.makePlayer(with: pattern)
+            try player.start(atTime: 0)
+        } catch {
+            print("Play failed: \(error)")
+        }
+    }
+}
+```
+
+### Pattern: a "shutter" haptic
+
+```swift
+let click = CHHapticEvent(eventType: .hapticTransient, parameters: [
+    .init(parameterID: .hapticIntensity, value: 1.0),
+    .init(parameterID: .hapticSharpness, value: 0.9)
+], relativeTime: 0)
+
+let echo = CHHapticEvent(eventType: .hapticTransient, parameters: [
+    .init(parameterID: .hapticIntensity, value: 0.4),
+    .init(parameterID: .hapticSharpness, value: 0.3)
+], relativeTime: 0.06)
+
+let pattern = try CHHapticPattern(events: [click, echo], parameters: [])
+HapticPlayer.shared.play(pattern: pattern)
+```
+
+### Pattern: a "heartbeat"
+
+```swift
+func heartbeatPattern(bpm: Double = 60) throws -> CHHapticPattern {
+    let interval = 60.0 / bpm
+    var events: [CHHapticEvent] = []
+
+    for beat in 0..<8 {
+        let t = Double(beat) * interval
+        // Lub (strong)
+        events.append(.init(eventType: .hapticTransient,
+                            parameters: [.init(parameterID: .hapticIntensity, value: 1.0),
+                                         .init(parameterID: .hapticSharpness, value: 0.4)],
+                            relativeTime: t))
+        // Dub (softer, 0.12s later)
+        events.append(.init(eventType: .hapticTransient,
+                            parameters: [.init(parameterID: .hapticIntensity, value: 0.6),
+                                         .init(parameterID: .hapticSharpness, value: 0.4)],
+                            relativeTime: t + 0.12))
+    }
+    return try CHHapticPattern(events: events, parameters: [])
+}
+```
+
+### AHAP files
+
+For complex patterns, write them as `.ahap` JSON files in your bundle and load:
+
+```swift
+let url = Bundle.main.url(forResource: "doorbell", withExtension: "ahap")!
+let pattern = try CHHapticPattern(contentsOf: url)
+```
+
+AHAP format (Apple Haptic and Audio Pattern):
+```json
+{
+  "Version": 1.0,
+  "Pattern": [
+    { "Event": { "Time": 0.0, "EventType": "HapticTransient",
+                 "EventParameters": [
+                   { "ParameterID": "HapticIntensity", "ParameterValue": 1.0 },
+                   { "ParameterID": "HapticSharpness", "ParameterValue": 0.8 }
+                 ]
+    }},
+    { "Event": { "Time": 0.15, "EventType": "HapticContinuous", "EventDuration": 0.4,
+                 "EventParameters": [
+                   { "ParameterID": "HapticIntensity", "ParameterValue": 0.5 },
+                   { "ParameterID": "HapticSharpness", "ParameterValue": 0.3 }
+                 ]
+    }}
+  ]
+}
+```
+
+Apple ships a few sample `.ahap` files in the Core Haptics sample code — start there.
+
+### Sharpness vs Intensity (the two knobs)
+
+- **Intensity** (volume): how strong does it feel? Low intensity = barely perceptible. High = strong vibration.
+- **Sharpness**: how *crisp* does it feel? Low sharpness = soft/dull thump (like a felt mallet on a drum). High sharpness = crisp click (like a fingernail on glass).
+
+Most natural-feeling haptics live around:
+- Tap/click: intensity 0.8–1.0, sharpness 0.6–1.0.
+- Soft press: intensity 0.4–0.6, sharpness 0.2–0.4.
+- Rumble: intensity 0.3–0.6, sharpness 0.0–0.2.
+
+### Audio + haptic synchronization
+
+`CHHapticEvent` has `hapticAudioCustom` (uses an embedded audio file). For deeply immersive moments (a sword-clash sound effect tied to a haptic), this is the only way to sync perfectly.
+
+```swift
+let audioParams: [CHHapticEventParameter] = [
+    .init(parameterID: .audioVolume, value: 0.8),
+    .init(parameterID: .audioPitch, value: 0.0)
+]
+let audioResource = try engine.registerAudioResource(URL(...))
+let audioEvent = CHHapticEvent(audioResourceID: audioResource,
+                                parameters: audioParams,
+                                relativeTime: 0)
+```
+
+---
+
+## 10. Action Button (iPhone 15 Pro+)
+
+The Action Button replaces the mute switch on iPhone 15 Pro and later. Users assign actions to it via Settings.
+
+### How your app participates
+
+Two paths:
+1. **App Shortcuts**: declare an `AppShortcut` and the user can map it to the Action Button.
+2. **Shortcuts integration**: provide an `AppIntent`; user can build a Shortcut that triggers your intent, then assign the Shortcut to the Action Button.
+
+```swift
+import AppIntents
+
+struct StartFocusSessionIntent: AppIntent {
+    static var title: LocalizedStringResource = "Start Focus Session"
+    static var openAppWhenRun = false  // important — instant action
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let session = try await FocusStore.shared.startSession()
+        return .result(dialog: "Focus session started for \(session.duration) minutes.")
+    }
+}
+
+struct MyAppShortcuts: AppShortcutsProvider {
+    static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: StartFocusSessionIntent(),
+            phrases: ["Start focus session in \(.applicationName)",
+                      "Begin focus in \(.applicationName)"],
+            shortTitle: "Start Focus",
+            systemImageName: "moon.zzz"
+        )
+    }
+}
+```
+
+### Design considerations
+
+- **Make the action fast and self-contained.** The user pressed a physical button — they want INSTANT result, not "we're loading."
+- **Provide audio/haptic feedback** because there's no visual confirmation that the action fired. A `UINotificationFeedbackGenerator().notificationOccurred(.success)` is appropriate.
+- **For long-running actions**, kick off a Live Activity + Dynamic Island presentation so the user sees confirmation.
+- **Don't require the app to be open.** Use `openAppWhenRun = false` whenever possible.
+
+### What kinds of actions work well
+
+✅ Toggle a state (start/stop a workout, mute/unmute notifications)
+✅ Record (audio, video, photo — direct to library)
+✅ Log (water intake, mood, custom event)
+✅ Open a specific screen (e.g., barcode scanner)
+
+❌ Anything that requires confirmation
+❌ Anything that opens a settings page
+❌ Multi-step flows
+
+---
+
+## 11. Camera Control button (iPhone 16/16 Pro)
+
+A physical button on the right edge of iPhone 16 with a force sensor + capacitive surface. Detects:
+- **Half-press** (force threshold 1): focus & exposure lock.
+- **Full-press** (force threshold 2): capture.
+- **Light-touch + slide**: parameter adjustment (zoom, EV, depth).
+- **Double light-press**: cycle through parameter controls.
+
+### API
+
+`AVCaptureEventInteraction` (iOS 17.2+) handles the physical-button events; for the slide-and-touch refinements, use `AVCaptureControl` and conform to its hierarchy.
+
+```swift
+import AVKit
+
+let interaction = AVCaptureEventInteraction { event in
+    switch event.phase {
+    case .began:
+        focusAndExposureLock()
+    case .ended:
+        capturePhoto()
+    @unknown default:
+        break
+    }
+}
+viewController.view.addInteraction(interaction)
+```
+
+### Design considerations
+
+- **Half-press haptic is system-provided** — you don't need to fire your own.
+- **Surface contextual controls during the slide gesture** — e.g., a zoom indicator that follows the slide.
+- **Capture immediately on full-press release** — don't wait for the user to lift their finger entirely; capture at peak force.
+
+This API is only relevant for camera apps. See the [Camera & Photos skill](../camera-and-photos/SKILL.md) for full camera UX coverage.
+
+---
+
+## 12. Symbol Effects
+
+iOS 17 added `.symbolEffect(...)` modifiers for SF Symbols. These are the easiest free wins in iOS design.
+
+### Built-in effects
+
+| Effect | Use case |
+| --- | --- |
+| `.symbolEffect(.bounce, value: trigger)` | Confirmation of a tap, like icon pulses |
+| `.symbolEffect(.pulse, options: .repeating)` | Continuous attention (recording, processing) |
+| `.symbolEffect(.variableColor)` | Animated color sweep across hierarchical layers (perfect for Wi-Fi/cellular bars filling in) |
+| `.symbolEffect(.scale.up)` | Emphasis on appearance |
+| `.symbolEffect(.appear / .disappear)` | Tied to view visibility — animates the symbol in/out |
+| `.symbolEffect(.replace, value: state)` | (iOS 17+) Morphs from one SF Symbol to another (e.g., play → pause) |
+| `.contentTransition(.symbolEffect(.automatic))` | Use with `Image(systemName:)` that changes — picks the right transition |
+
+### Concrete examples
+
+**Send button morphs to checkmark on success:**
+```swift
+Image(systemName: succeeded ? "checkmark" : "paperplane.fill")
+    .contentTransition(.symbolEffect(.replace))
+```
+
+**Heart pulses on like:**
+```swift
+Image(systemName: liked ? "heart.fill" : "heart")
+    .foregroundStyle(liked ? .red : .gray)
+    .symbolEffect(.bounce, value: liked)
+```
+
+**Wi-Fi loading animation:**
+```swift
+Image(systemName: "wifi")
+    .symbolRenderingMode(.hierarchical)
+    .symbolEffect(.variableColor.iterative, isActive: isLoading)
+```
+
+### Rules
+
+- **Use sparingly.** Symbol effects everywhere = visual cacophony. Pick 3–5 moments per app.
+- **Tie to user action.** A symbol that bounces on its own (no user interaction) is annoying.
+- **Pair with haptics.** A bouncing heart + a `.medium` impact = perfect like-button feel. Either alone = forgettable.
+
+---
+
+## 13. Focus filters
+
+iOS 16+: users can configure which content from your app appears during specific Focus modes (Work, Personal, Sleep, etc.).
+
+### Use cases
+
+- A messaging app hides certain group chats during Sleep focus.
+- A news app shows only specific topics during Work focus.
+- A music app picks a different default playlist per focus.
+
+### Implementation
+
+Provide a `SetFocusFilterIntent`:
+
+```swift
+import AppIntents
+
+struct InboxFocusFilter: SetFocusFilterIntent {
+    static var title: LocalizedStringResource = "Inbox Focus Filter"
+    static var description: LocalizedStringResource = "Filter which inboxes appear during this Focus."
+
+    @Parameter(title: "Selected Inboxes")
+    var inboxes: [InboxEntity]
+
+    func perform() async throws -> some IntentResult {
+        await UserDefaults(suiteName: "group.com.app")?
+            .set(inboxes.map(\.id), forKey: "focus.activeInboxes")
+        return .result()
+    }
+}
+```
+
+Users see your filter in Settings → Focus → [Focus mode] → Apps. They configure the parameter, and your intent runs whenever that Focus activates.
+
+---
+
+## Animation curves cheat sheet (cross-surface)
+
+| Surface | Curve | Notes |
+| --- | --- | --- |
+| Widget number change | `.contentTransition(.numericText())` | System-driven, just opt in |
+| Symbol replace | `.contentTransition(.symbolEffect(.replace))` | iOS 17+ |
+| Live Activity content change | (system-driven) | You don't animate; the system snapshots & morphs |
+| Compact → Expanded DI | (system-driven) | Make snapshots structurally similar to avoid jank |
+| Context menu open | (system-driven) | Use `.contextMenu` and trust it |
+| Lock Screen Live Activity reveal | `.spring(response: 0.42, dampingFraction: 0.85)` | System default — match it in your in-app transitions |
+| Haptic Touch lift | `.spring(response: 0.32, dampingFraction: 0.75)` | When implementing custom menus |
+| Action Button feedback | n/a | Use audio + haptic, NOT visual (button is on the side) |
+| Control Widget toggle | (system-driven) | Just provide on/off states |
+
+---
+
+## Haptics cheat sheet (cross-surface)
+
+| Surface | Haptic |
+| --- | --- |
+| Widget Button tap | The system fires a default selection haptic — don't double-fire from your intent |
+| Widget Toggle change | Same — system handles it |
+| Live Activity tap (opens app) | System haptic on transition |
+| Dynamic Island long-press to expand | System-provided, you don't add to it |
+| Context menu open | System fires `.medium` |
+| Context menu item select | System fires `.medium` |
+| Context menu dismiss (outside) | System fires `.soft` |
+| Action Button trigger | NONE from the OS — YOU should fire `.success` notification haptic in your intent's `perform()` |
+| Camera Control half-press | System provides distinctive "click" haptic |
+| Camera Control full-press | System provides — pair with shutter haptic in your camera app |
+
+Rule: **don't double-fire**. If the system fires, don't add yours. If the system is silent (Action Button), YOU must fire.
+
+---
+
+## iOS 26 Liquid Glass considerations
+
+iOS 26 (released September 2025) introduces the Liquid Glass material across the system. For peripheral surfaces:
+
+- **Widgets** automatically pick up Liquid Glass when you use `.containerBackground(.fill.tertiary, for: .widget)`.
+- **Use `.widgetAccentable()`** on elements that should tint under the user's accent rendering mode.
+- **Live Activities** render with Liquid Glass on the Lock Screen — no API change needed.
+- **Dynamic Island** is unaffected (it's already a "canvas of foreground elements").
+- **Control Center widgets** inherit Liquid Glass automatically.
+
+You don't need to opt in to Liquid Glass for most surfaces — just stop hardcoding background colors. Use semantic system fills (`.fill.tertiary`, `.fill.quaternary`) and let the system render the material.
+
+For app-side UI on iOS 26, the `glassEffect()` modifier (or `expo-glass-effect` for Expo apps) gives you Liquid Glass on custom views. Don't apply it to widgets — they use the system widget container, which already handles it.
+
+---
+
+## Anti-patterns to avoid (the full list)
+
+1. **Widgets that update too often.** You'll burn through the system budget and the user will see stale content. Update only when there's meaningful change.
+2. **Live Activities that don't end.** A 6-hour-old "Pizza is on the way" activity is a worse UX than no activity. Set `staleDate`. End within reason.
+3. **Dynamic Island backgrounds.** Apple's HIG is explicit. Foreground elements only.
+4. **Interactive buttons in compact/minimal DI presentations.** Apple's HIG forbids them. Use expanded only.
+5. **Haptics on every interaction.** Vibrating phone. Pick the 5–10 moments per app where haptics genuinely add value.
+6. **Symbol effects on every icon.** Visual noise. Pick 3–5 moments.
+7. **Context menus as the only path to an action.** Discoverability hell. Mirror in visible UI.
+8. **Cold-calling the haptic engine.** Always `prepare()` first. Always reuse generator instances.
+9. **Tying the same App Intent to "open the app" + "perform action".** Decide which one this is and commit.
+10. **Adding a logo to your widget.** The app icon IS the logo, shown beside the widget by the system. Don't duplicate.
+11. **Lock Screen widgets in full color.** Apple's HIG quietly discourages this; the tint-mode is the iOS aesthetic.
+12. **A Live Activity that announces "X started" then "X finished" with no updates in between.** That's a notification, not a Live Activity.
+13. **Custom haptic patterns longer than 30 seconds.** API limit. And way too long anyway.
+14. **Forgetting to test in red-tint StandBy mode.** Most apps fail this test.
+
+---
+
+## Permission & privacy
+
+- Live Activities require user consent: the user must enable "Live Activities" for your app in Settings (default on).
+- Push tokens for Live Activities are NOT the same as your APNs device token — request a new one per activity.
+- Widget data MUST be stored in an App Group container if both your app and the widget extension need to read it. Use `UserDefaults(suiteName: "group.com.app")`.
+- Sensitive data on Lock Screen widgets: use `.privacySensitive(true)` to redact when the device is locked. Currently mostly honored by Apple Watch faces, but use it everywhere for future-proofing.
+
+---
+
+## Implementation checklist for a new app
+
+Use this when adding peripheral surfaces:
+
+### Widgets
+- [ ] **Define App Intents** for the 1–3 core actions (toggle, log, navigate).
+- [ ] **Home widget**: `.systemSmall` + `.systemMedium` minimum. `.systemLarge` if list-based.
+- [ ] **Lock Screen widget**: `.accessoryCircular` + `.accessoryRectangular`.
+- [ ] **StandBy support**: confirm `.systemSmall` looks great at 6 feet, including red-tint mode.
+- [ ] **iOS 26 Liquid Glass**: use semantic backgrounds, `.widgetAccentable()` where appropriate.
+- [ ] **Refresh policy**: long timelines with `.after(longInterval)` policy.
+- [ ] **App Group**: shared container for widget ↔ app data.
+
+### Live Activities
+- [ ] **`ActivityAttributes`** defined with stable identity + dynamic `ContentState`.
+- [ ] **Lock Screen presentation** with route/map/progress hero.
+- [ ] **Dynamic Island compact** + **expanded** + **minimal** presentations.
+- [ ] **`staleDate`** set on every update.
+- [ ] **`pushTokenUpdates`** observer → server.
+- [ ] **End policy**: `.after(now + 60)` for "completed" states.
+- [ ] **Test**: minimal mode (start 2 activities at once), expanded mode (long-press in simulator).
+
+### Control Center widget (iOS 18+)
+- [ ] **ControlWidget** declared.
+- [ ] **`ControlWidgetButton` or `ControlWidgetToggle`** with associated AppIntent.
+- [ ] **Custom SF Symbol** in asset catalog (if not using stock).
+
+### Haptics
+- [ ] **Audit every tappable element** — does it haptic?
+- [ ] **`UIFeedbackGenerator` instances** are class properties (reused), not locals.
+- [ ] **`prepare()`** in `viewDidAppear` / `.onAppear`.
+- [ ] **CoreHaptics engine** wrapped in a singleton.
+- [ ] **At least one custom AHAP pattern** for the app's signature moment.
+- [ ] **Test on a real device** — simulator has no haptics.
+
+### Action Button & Camera Control
+- [ ] **AppShortcutsProvider** with 1–3 phrases.
+- [ ] **AppIntent**(s) with `openAppWhenRun = false`.
+- [ ] **Success haptic** fires from the intent's `perform()`.
+- [ ] **Long actions**: kick off Live Activity for confirmation.
+
+### Context menus
+- [ ] **Every list cell** has a context menu with 3–5 relevant actions.
+- [ ] **Preview** included for photos/cards.
+- [ ] **Destructive actions** marked `role: .destructive`.
+- [ ] **Mirror context-menu actions** in a visible UI (swipe, button, etc.).
+
+### Symbol Effects (iOS 17+)
+- [ ] **Like/save/favorite icons** use `.bounce` with `value:`.
+- [ ] **Play ↔ Pause toggles** use `.replace`.
+- [ ] **Loading indicators** use `.variableColor` or `.pulse`.
+
+---
+
+## Final principles
+
+1. **Peripheral surfaces are the product for most users most of the time.** A widget seen 100× a day matters more than a screen seen 5×.
+2. **One App Intent. Many surfaces. No duplicated logic.** Architect around intents from day one.
+3. **The Dynamic Island is a stage, not a billboard.** Less is more. Always.
+4. **Haptics are punctuation.** A `.` not a `!`.
+5. **The half-second test**: if a user can't parse your widget / Live Activity / Dynamic Island in 0.5 seconds, it's broken. Redesign.
+6. **Glanceability over completeness.** Show the ONE thing that matters. The app is for the rest.
+7. **Default everything correctly.** Most users don't customize. Make the out-of-box experience the polished one.
+
+The benchmark: a user puts their phone face-down on the table. Six hours later, they glance at it. Your Lock Screen widget tells them what they need in under a second. They don't open your app — because they didn't need to. THAT is when you've won.
