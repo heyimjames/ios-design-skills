@@ -206,3 +206,7 @@ Reference reading: [Rauno Freiberg — Invisible Details of Interaction Design](
 ## License
 
 MIT — see [LICENSE](LICENSE). Use them, fork them, ship apps with them.
+
+---
+
+Made by [James Frewin](https://jamesfrewin.com) of [October](https://octoberwip.com), a design studio · [@james_frewin](https://x.com/james_frewin) · [LinkedIn](https://linkedin.com/in/jamesfrewin)

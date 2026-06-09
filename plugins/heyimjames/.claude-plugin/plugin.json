@@ -5,7 +5,7 @@
   "description": "Four detailed iOS/SwiftUI design-engineering skills by James Frewin — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics, Wallet passes), and the final 5% of polish (motion physics, OKLCH+Display P3 color, typography, MeshGradient backgrounds, shareable image generation). After install, invoke via heyimjames:camera-and-photos, heyimjames:chat-and-messaging, heyimjames:interaction-primitives, heyimjames:the-final-5-percent.",
   "author": {
     "name": "James Frewin",
-    "url": "https://github.com/heyimjames"
+    "url": "https://jamesfrewin.com"
   },
   "homepage": "https://github.com/heyimjames/ios-design-skills",
   "repository": "https://github.com/heyimjames/ios-design-skills",
