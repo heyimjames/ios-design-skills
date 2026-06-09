@@ -1,9 +1,29 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "heyimjames",
-  "version": "1.0.0",
-  "description": "Four detailed iOS/SwiftUI design-engineering skills by James Frewin — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics), and the final 5% of polish. After install, invoke via heyimjames:camera-and-photos, heyimjames:chat-and-messaging, heyimjames:interaction-primitives, heyimjames:the-final-5-percent.",
+  "displayName": "heyimjames — iOS Design Skills",
+  "description": "Four detailed iOS/SwiftUI design-engineering skills by James Frewin — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics, Wallet passes), and the final 5% of polish (motion physics, OKLCH+Display P3 color, typography, MeshGradient backgrounds, shareable image generation). After install, invoke via heyimjames:camera-and-photos, heyimjames:chat-and-messaging, heyimjames:interaction-primitives, heyimjames:the-final-5-percent.",
   "author": {
-    "name": "James Frewin"
+    "name": "James Frewin",
+    "url": "https://github.com/heyimjames"
   },
-  "license": "MIT"
+  "homepage": "https://github.com/heyimjames/ios-design-skills",
+  "repository": "https://github.com/heyimjames/ios-design-skills",
+  "license": "MIT",
+  "keywords": [
+    "ios",
+    "swift",
+    "swiftui",
+    "ios-26",
+    "liquid-glass",
+    "design-engineering",
+    "polish",
+    "camera",
+    "messaging",
+    "widgets",
+    "live-activities",
+    "haptics",
+    "oklch",
+    "display-p3"
+  ]
 }
