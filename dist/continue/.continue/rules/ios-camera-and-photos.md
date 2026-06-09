@@ -439,6 +439,51 @@ The wrong font wrecks the whole feel. Defaults that work:
 - **Chrome palette via OKLCH**: when designing the camera's accent palette (active controls, mode-selected indicators, focus rings, recording dot), pick all colors at the SAME OKLCH `L` value (e.g., `L=0.7`) so they feel like siblings — no color dominates the chrome. See `the-final-5-percent` §5 for the full workflow. This is what makes Halide and Kino's chrome feel so refined: every active indicator has the same perceived brightness as every other.
 - **Histograms use perceptual luminance, not RGB.** If your editing UI shows a histogram, the standard RGB histogram is misleading — pure yellow registers high in R+G but the eye sees it as a single value. Compute luminance via OKLCH `L` (or BT.709 luma at minimum) for an accurate exposure read. Photographers will notice.
 
+### Curiosity-gap sharing — partial reveal for virality
+
+When users share a photo through your app to social platforms (Stories, iMessage), consider a "curiosity-gap" share preview — the Bier viral pattern:
+
+- **Full photo** stays in your app.
+- **Shared preview** is partially blurred OR cropped, with a "Tap to see the full photo on [App]" overlay.
+- Recipient sees enough to be intrigued, must install to see the rest.
+
+For social camera apps (Locket, Lapse, BeReal-style), this is the difference between a share that converts and a share that gives away your app's value for free.
+
+```swift
+@MainActor
+func generateTeasePreview(from photo: UIImage) -> UIImage {
+    let view = ZStack {
+        Image(uiImage: photo)
+            .resizable()
+            .scaledToFill()
+            .blur(radius: 40)               // hide the actual content
+        VStack {
+            Image(uiImage: photo)            // a small clear teaser strip
+                .resizable()
+                .scaledToFill()
+                .frame(height: 280)
+                .clipped()
+                .mask(LinearGradient(
+                    colors: [.black, .black.opacity(0)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+            Spacer()
+            Label("See the full photo on [App]", systemImage: "arrow.up.forward.app.fill")
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.bottom, 60)
+        }
+    }
+    .frame(width: 1080, height: 1920)
+
+    let renderer = ImageRenderer(content: view)
+    renderer.scale = 3
+    return renderer.uiImage ?? photo
+}
+```
+
+See `the-final-5-percent` shareable image generation section for the full pattern — same `ImageRenderer` foundation, applied to camera-specific tease content.
+
 ---
 
 ## Novel iOS APIs to consider

@@ -26,6 +26,18 @@ The pixel-pushers' rules:
 
 ---
 
+## NEW additions covered in this update
+
+| Surface | Section |
+| --- | --- |
+| Apple Wallet passes (loyalty / status / events) | [§14](#14-apple-wallet-passes--gamified-loyalty--status) |
+| Live Activities for urgency (countdown timers) | [§15](#15-live-activities-for-urgency--the-explode-pattern) |
+| Push notification timing & content rules | [§16](#16-push-notification-timing--content--biers-rules) |
+| Picture-in-Picture for guided onboarding | [§17](#17-picture-in-picture-for-guided-onboarding) |
+| App Clips — try-before-install viral installs | [§18](#18-app-clips--try-before-install) |
+
+---
+
 ## What this skill covers
 
 | Surface | Framework | Min iOS | Section |
@@ -1009,6 +1021,231 @@ struct InboxFocusFilter: SetFocusFilterIntent {
 ```
 
 Users see your filter in Settings → Focus → [Focus mode] → Apps. They configure the parameter, and your intent runs whenever that Focus activates.
+
+---
+
+## 14. Apple Wallet passes — gamified loyalty & status
+
+One of the most powerful and least-used peripheral surfaces in consumer iOS. A Wallet pass is a persistent visual artifact in the user's Wallet app — always one swipe away from the Lock Screen, updatable via push, geofenced for location-aware delivery.
+
+### When to use
+
+- **Loyalty cards / status tiers** — gold/silver/bronze membership, points balance, expiring rewards.
+- **Event tickets** — concerts, screenings, app-organized meetups.
+- **Boarding passes** — flights, transit (long-distance bus, ferry, train).
+- **Coupons / offers** — time-limited, redeemable in store.
+- **Store cards** — gift cards, membership cards.
+- **Punch cards** — "buy 9, get 1 free" coffee-shop pattern.
+
+### Why it's a polish opportunity
+
+Wallet passes are **visual** — branded, optionally animated subtly (the Apple Card chip rotates), **geofenced** to appear on the Lock Screen at relevant locations, and **push-updated** to reflect real-time state (your gate, your tier, your remaining balance).
+
+A gold-tier loyalty card pulled from Wallet on the Lock Screen at the right Starbucks creates the same dopamine as physical status.
+
+### Implementation overview
+
+```swift
+import PassKit
+
+// 1. Create the .pkpass file on your server (JSON + assets, signed by your Pass Type Certificate).
+// 2. Deliver the .pkpass URL or data to the device.
+// 3. Use PKAddPassesViewController to add it.
+
+let pass = try PKPass(data: passData)
+let vc = PKAddPassesViewController(pass: pass)
+viewController.present(vc, animated: true)
+```
+
+### Pass design rules
+
+| Rule | Detail |
+| --- | --- |
+| **Pass style matters** | `storeCard`, `generic`, `eventTicket`, `boardingPass`, `coupon` — each has system layout |
+| **Background image** | Full-bleed art at 320×460pt. Pick OKLCH-balanced colors (see [the-final-5-percent §5](../the-final-5-percent/SKILL.md#5-color--material)) |
+| **Logo + label** | Top-left. 160pt wide max. Keep simple |
+| **Primary field** | The big number — points, balance, tier |
+| **Secondary fields** | 2–3 supporting stats |
+| **Auxiliary fields** | Smaller — dates, member-since |
+| **Strip image** (optional) | Behind primary field — branding flair |
+| **Barcode** | QR or Aztec for redemption, only if relevant |
+
+### Push updates — keep passes alive
+
+Register a web service URL with the pass. When data changes (new tier, new balance), your server sends an APNs push. Wallet refreshes the pass quietly; the new state appears next time the user opens it.
+
+```json
+{
+    "webServiceURL": "https://api.yourapp.com/wallet/",
+    "authenticationToken": "<unique-per-pass>"
+}
+```
+
+### Geofencing — appear at the right moment
+
+```json
+{
+    "locations": [
+        { "latitude": 37.7749, "longitude": -122.4194,
+          "relevantText": "Show this at checkout" }
+    ],
+    "relevantDate": "2026-06-15T19:00:00Z"
+}
+```
+
+Wallet surfaces the pass on the Lock Screen when the user is near the location OR the date is approaching. The user can swipe from the bottom-right to see it. Pure magic for loyalty / event UX.
+
+### Anti-patterns
+
+- **Static pass that never updates.** Pointless — could've been a screenshot. Always wire push.
+- **Promotional pass with no real value.** Wallet is intimate. Don't pollute.
+- **Pass for one-time use with a stale barcode.** Generate dynamically.
+- **Generic art that looks like every other coupon.** Brand visibly.
+
+### Reference
+
+- [Apple — Wallet Developer Guide](https://developer.apple.com/documentation/walletpasses)
+- [Apple — PassKit framework](https://developer.apple.com/documentation/passkit)
+
+---
+
+## 15. Live Activities for urgency — the Explode pattern
+
+A specific Live Activity pattern that drives conversion: **time-limited offer countdown on the Lock Screen and Dynamic Island**. The app Explode uses this to surface a "free premium for 2 hours after sharing" timer. The user sees their timer counting down whenever they glance at their phone — high urgency, zero friction to act.
+
+```swift
+struct PremiumOfferAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        var expiresAt: Date
+    }
+    var offerTitle: String
+}
+
+// Compact DI: just a countdown
+DynamicIsland {
+    DynamicIslandExpandedRegion(.center) {
+        VStack {
+            Text(context.attributes.offerTitle).font(.headline)
+            Text(timerInterval: now...context.state.expiresAt, countsDown: true)
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .monospacedDigit()
+        }
+    }
+} compactLeading: {
+    Image(systemName: "sparkles")
+} compactTrailing: {
+    Text(timerInterval: now...context.state.expiresAt, countsDown: true)
+        .font(.system(.body, design: .rounded, weight: .semibold))
+        .monospacedDigit()
+} minimal: {
+    Image(systemName: "sparkles")
+}
+```
+
+`Text(timerInterval:countsDown:)` auto-updates without manual animation — built into ActivityKit. The countdown ticks in the user's peripheral vision all day.
+
+**Anti-pattern**: don't abuse this. A "limited offer" Live Activity that's actually always-available wears trust thin and gets your app reported. Reserve for genuinely time-bound moments.
+
+---
+
+## 16. Push notification timing & content — Bier's rules
+
+A great notification is **dopamine delivered**. A bad one is **nagging delivered**. Full copywriting patterns live in [chat-and-messaging §5](../chat-and-messaging/SKILL.md#5-color--material) (notification copywriting subsection); the high-level rules:
+
+| ❌ Bad | ✅ Good |
+| --- | --- |
+| "You haven't opened the app in 3 days" | "Sam just sent you a message" |
+| "Don't lose your streak!" | "🔥 7-day streak — open to keep it" |
+| "We miss you" | "Alice tagged you in a memory" |
+| "New features available" | "Voice messages are live in your chats" |
+| "Update available" | "Your morning recap is ready" |
+
+### Send rules
+
+- **Only at peak engagement times** — morning commute (7–9am local), lunch (12–1pm), after work (5–7pm), pre-sleep (9–10pm). NEVER overnight (10pm–7am).
+- **Every notification must make the user feel positive.** If you wouldn't want a friend to send this to you, don't send it.
+- **Cluster fatigue** — never within 5 minutes of a prior notification.
+- **Communication Notifications API** — use it for every person-to-person notification. Avatars on Lock Screen, sender name (not app name) in title.
+
+### `interruptionLevel` — choose carefully
+
+| Level | Use |
+| --- | --- |
+| `.passive` | Background updates, summaries — bundles in Apple Intelligence summary, doesn't ring |
+| `.active` | DEFAULT — standard notifications during DND windows are suppressed |
+| `.timeSensitive` | Genuinely urgent person-to-person — pierces some focus modes |
+| `.critical` | Emergency / safety — requires special entitlement; bypasses all silencing |
+
+Most notifications should be `.active`. Escalate `.timeSensitive` only when the user expects the message NOW (incoming call, urgent direct mention). Abuse drops your interruption privileges fast.
+
+---
+
+## 17. Picture-in-Picture for guided onboarding
+
+A Bier pattern that's wildly underused: when onboarding requires the user to leave your app (copy a code from email, allow a permission in Settings, follow a link to a partner site), use Picture-in-Picture to keep YOUR app visible in a floating window.
+
+The user follows your steps WITHOUT context-switching — they see "Now tap Allow" overlaid on the Settings app.
+
+```swift
+import AVKit
+
+// Use AVPlayerLayer with a looping video showing your guidance,
+// OR a CALayer wrapping custom content rendered to a CMSampleBuffer
+let pipController = AVPictureInPictureController(playerLayer: playerLayer)
+pipController?.delegate = self
+pipController?.startPictureInPicture()
+```
+
+Render your guidance UI into the video (or content layer). Users complete cross-app flows 3–5× more reliably with PiP guidance vs. without.
+
+**Best for**:
+- Permission flows that require Settings.app navigation
+- SMS verification code copy/paste flows
+- Cross-app onboarding (e.g., "Link your Spotify account")
+- Tutorial videos that the user can keep visible while exploring
+
+**Anti-pattern**: trapping the user in PiP. Always include a clear "Got it / Dismiss" affordance in your PiP UI, and tear it down the moment the user re-enters your app.
+
+---
+
+## 18. App Clips — try-before-install
+
+App Clips are a < 10MB slice of your app that runs WITHOUT full install. Tap an NFC tag, scan a QR, tap a link in Messages — the relevant slice loads instantly, the user experiences value, then the full app prompt appears.
+
+**Viral use cases**:
+- **Group invites** — user shares "join my group" link → recipient joins via App Clip without installing.
+- **Event RSVP** — open a link → see event details + RSVP in an App Clip.
+- **Shareable content viewer** — photo, video, or score viewable in App Clip; install for full features.
+- **One-time purchases** — pay-to-park, pay-to-rent, pay-once experiences.
+
+This is the Bier playbook: **deliver value BEFORE asking for install commitment**.
+
+### App Clip card design
+
+Apple-controlled but configurable:
+- Title, subtitle, hero image (1800×1200pt)
+- Action button label ("Get Started", "Order Now", "View Event")
+- Card colors / scheme
+
+```swift
+// In your App Clip target's Info.plist, configure:
+// NSAppClip > NSAppClipRequestEphemeralUserNotification = YES
+// (Lets you request 1-hour notifications without full permission)
+```
+
+### Combine with other peripheral surfaces
+
+- **Smart App Banners** on websites → App Clip when tapped
+- **Apple Wallet pass attachments** → App Clip on pass tap
+- **Communication Notifications** with App Clip card in iMessage → join group without install
+
+App Clip + Wallet pass + Live Activity is a triple-surface viral loop: friend sends invite via Messages → opens as App Clip → joins the event → gets a Wallet pass with geofenced reminder → Live Activity on the event day. Three peripheral surfaces, one viral flow, zero install friction.
+
+### Anti-patterns
+
+- **App Clip that requires sign-up before showing value.** Defeats the entire point.
+- **App Clip > 10MB.** Apple rejects it; the experience won't be invokable from NFC/QR.
+- **App Clip that's a marketing teaser instead of real functionality.** Users tap, get nothing useful, never install.
 
 ---
 

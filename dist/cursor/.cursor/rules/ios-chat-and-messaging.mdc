@@ -624,6 +624,41 @@ try engine.makePlayer(with: pattern).start(atTime: 0)
 - **Received bubble**: `Color(.tertiarySystemGroupedBackground)` (light), `Color(.systemGray5)` (dark).
 - **Background of conversation**: `Color(.systemGroupedBackground)` (light), `Color(.systemBackground)` (dark). Telegram and WhatsApp use a subtle pattern/wallpaper — if you do this, make it OFF by default.
 
+**Push notification copywriting — the Bier rules.** The notification IS the user's first impression of your app, every day. Apps that nail push copy get re-engaged daily; apps that don't get muted, then deleted.
+
+Every notification must make the user feel something POSITIVE. Dopamine delivered, not nagging delivered:
+
+| ❌ Bad — nag | ✅ Good — value |
+| --- | --- |
+| "You haven't opened the app in 3 days" | "Sam just replied to your message" |
+| "Don't lose your streak!" | "🔥 You're 7 days in. Keep going?" |
+| "New activity" | "Alice tapped ❤️ on your photo" |
+| "1 new message" | "Sam: are we still on for tonight?" |
+| "Tap to see what you missed" | "Alice and 2 others shared photos in Family Chat" |
+| "Update available" | "Voice messages are live. Try them in your chat with Sam." |
+| "We miss you" | "Alice just tagged you in a memory" |
+
+**Patterns that work:**
+1. **Name the sender, preview the content.** Use Communication Notifications API (see [interaction-primitives](../interaction-primitives/SKILL.md)) — avatar on Lock Screen + sender name in the title (not your app name).
+2. **Specificity over generality.** "Alice tapped ❤️ on your photo" > "You have new activity" by 10:1 on open rates.
+3. **Curiosity gap** (Bier pattern). "Someone left you a message — open to see who." Don't reveal everything in the preview. Works exceptionally well for anonymous chat and dating apps.
+4. **Quantified social proof.** "Sam and 4 others are typing…" > "Multiple people are typing."
+5. **Time-aware copy.** "Good morning. Sam messaged you while you were asleep." Use the user's timezone via `Calendar.current.timeZone`.
+
+**Timing — only at peak engagement windows:**
+- Morning commute (7–9am local)
+- Lunch break (12–1pm)
+- After work (5–7pm)
+- Pre-sleep window (9–10pm)
+- **NEVER** overnight (10pm–7am local)
+- **NEVER** within 5 minutes of a prior notification (cluster fatigue)
+
+Use `UNNotificationRequest` with `interruptionLevel` set thoughtfully — most should be `.active`, escalate to `.timeSensitive` only for genuinely urgent person-to-person (calls, direct mentions). Reserve `.critical` for safety/emergency only (and you need the entitlement).
+
+The Bier rule: **a great notification makes the user grateful you sent it.** If you wouldn't want a friend to send you this exact message at this exact time, don't send it.
+
+---
+
 **Chat wallpapers done right.** If you offer wallpapers (Telegram/WhatsApp pattern), each one is layered:
 1. **Base color** picked in OKLCH so all wallpapers share the same perceived brightness (no "this one is darker than that one" inconsistency).
 2. **Subtle pattern OR MeshGradient** (iOS 18+) for organic richness — never a flat gradient, which BANDS on OLED behind bubbles.

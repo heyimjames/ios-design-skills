@@ -453,6 +453,51 @@ The wrong font wrecks the whole feel. Defaults that work:
 - **Chrome palette via OKLCH**: when designing the camera's accent palette (active controls, mode-selected indicators, focus rings, recording dot), pick all colors at the SAME OKLCH `L` value (e.g., `L=0.7`) so they feel like siblings — no color dominates the chrome. See `the-final-5-percent` §5 for the full workflow. This is what makes Halide and Kino's chrome feel so refined: every active indicator has the same perceived brightness as every other.
 - **Histograms use perceptual luminance, not RGB.** If your editing UI shows a histogram, the standard RGB histogram is misleading — pure yellow registers high in R+G but the eye sees it as a single value. Compute luminance via OKLCH `L` (or BT.709 luma at minimum) for an accurate exposure read. Photographers will notice.
 
+### Curiosity-gap sharing — partial reveal for virality
+
+When users share a photo through your app to social platforms (Stories, iMessage), consider a "curiosity-gap" share preview — the Bier viral pattern:
+
+- **Full photo** stays in your app.
+- **Shared preview** is partially blurred OR cropped, with a "Tap to see the full photo on [App]" overlay.
+- Recipient sees enough to be intrigued, must install to see the rest.
+
+For social camera apps (Locket, Lapse, BeReal-style), this is the difference between a share that converts and a share that gives away your app's value for free.
+
+```swift
+@MainActor
+func generateTeasePreview(from photo: UIImage) -> UIImage {
+    let view = ZStack {
+        Image(uiImage: photo)
+            .resizable()
+            .scaledToFill()
+            .blur(radius: 40)               // hide the actual content
+        VStack {
+            Image(uiImage: photo)            // a small clear teaser strip
+                .resizable()
+                .scaledToFill()
+                .frame(height: 280)
+                .clipped()
+                .mask(LinearGradient(
+                    colors: [.black, .black.opacity(0)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+            Spacer()
+            Label("See the full photo on [App]", systemImage: "arrow.up.forward.app.fill")
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.bottom, 60)
+        }
+    }
+    .frame(width: 1080, height: 1920)
+
+    let renderer = ImageRenderer(content: view)
+    renderer.scale = 3
+    return renderer.uiImage ?? photo
+}
+```
+
+See `the-final-5-percent` shareable image generation section for the full pattern — same `ImageRenderer` foundation, applied to camera-specific tease content.
+
 ---
 
 ## Novel iOS APIs to consider
@@ -1308,6 +1353,41 @@ try engine.makePlayer(with: pattern).start(atTime: 0)
 - **Received bubble**: `Color(.tertiarySystemGroupedBackground)` (light), `Color(.systemGray5)` (dark).
 - **Background of conversation**: `Color(.systemGroupedBackground)` (light), `Color(.systemBackground)` (dark). Telegram and WhatsApp use a subtle pattern/wallpaper — if you do this, make it OFF by default.
 
+**Push notification copywriting — the Bier rules.** The notification IS the user's first impression of your app, every day. Apps that nail push copy get re-engaged daily; apps that don't get muted, then deleted.
+
+Every notification must make the user feel something POSITIVE. Dopamine delivered, not nagging delivered:
+
+| ❌ Bad — nag | ✅ Good — value |
+| --- | --- |
+| "You haven't opened the app in 3 days" | "Sam just replied to your message" |
+| "Don't lose your streak!" | "🔥 You're 7 days in. Keep going?" |
+| "New activity" | "Alice tapped ❤️ on your photo" |
+| "1 new message" | "Sam: are we still on for tonight?" |
+| "Tap to see what you missed" | "Alice and 2 others shared photos in Family Chat" |
+| "Update available" | "Voice messages are live. Try them in your chat with Sam." |
+| "We miss you" | "Alice just tagged you in a memory" |
+
+**Patterns that work:**
+1. **Name the sender, preview the content.** Use Communication Notifications API (see [interaction-primitives](../interaction-primitives/SKILL.md)) — avatar on Lock Screen + sender name in the title (not your app name).
+2. **Specificity over generality.** "Alice tapped ❤️ on your photo" > "You have new activity" by 10:1 on open rates.
+3. **Curiosity gap** (Bier pattern). "Someone left you a message — open to see who." Don't reveal everything in the preview. Works exceptionally well for anonymous chat and dating apps.
+4. **Quantified social proof.** "Sam and 4 others are typing…" > "Multiple people are typing."
+5. **Time-aware copy.** "Good morning. Sam messaged you while you were asleep." Use the user's timezone via `Calendar.current.timeZone`.
+
+**Timing — only at peak engagement windows:**
+- Morning commute (7–9am local)
+- Lunch break (12–1pm)
+- After work (5–7pm)
+- Pre-sleep window (9–10pm)
+- **NEVER** overnight (10pm–7am local)
+- **NEVER** within 5 minutes of a prior notification (cluster fatigue)
+
+Use `UNNotificationRequest` with `interruptionLevel` set thoughtfully — most should be `.active`, escalate to `.timeSensitive` only for genuinely urgent person-to-person (calls, direct mentions). Reserve `.critical` for safety/emergency only (and you need the entitlement).
+
+The Bier rule: **a great notification makes the user grateful you sent it.** If you wouldn't want a friend to send you this exact message at this exact time, don't send it.
+
+---
+
 **Chat wallpapers done right.** If you offer wallpapers (Telegram/WhatsApp pattern), each one is layered:
 1. **Base color** picked in OKLCH so all wallpapers share the same perceived brightness (no "this one is darker than that one" inconsistency).
 2. **Subtle pattern OR MeshGradient** (iOS 18+) for organic richness — never a flat gradient, which BANDS on OLED behind bubbles.
@@ -1596,6 +1676,18 @@ The pixel-pushers' rules:
 - **Live Activities live and die.** Set a `staleDate`. End them within 8 hours. Never leave a stale Activity hanging.
 - **The Dynamic Island is a canvas, not a wallpaper.** No background colors, no images that bleed to the edge — Apple's HIG is explicit: foreground elements only.
 - **Default haptics are not optional.** Every tappable thing in your app should fire a haptic. If you're not sure which, use `.selectionChanged`. It's never wrong.
+
+---
+
+## NEW additions covered in this update
+
+| Surface | Section |
+| --- | --- |
+| Apple Wallet passes (loyalty / status / events) | [§14](#14-apple-wallet-passes--gamified-loyalty--status) |
+| Live Activities for urgency (countdown timers) | [§15](#15-live-activities-for-urgency--the-explode-pattern) |
+| Push notification timing & content rules | [§16](#16-push-notification-timing--content--biers-rules) |
+| Picture-in-Picture for guided onboarding | [§17](#17-picture-in-picture-for-guided-onboarding) |
+| App Clips — try-before-install viral installs | [§18](#18-app-clips--try-before-install) |
 
 ---
 
@@ -2585,6 +2677,231 @@ Users see your filter in Settings → Focus → [Focus mode] → Apps. They conf
 
 ---
 
+## 14. Apple Wallet passes — gamified loyalty & status
+
+One of the most powerful and least-used peripheral surfaces in consumer iOS. A Wallet pass is a persistent visual artifact in the user's Wallet app — always one swipe away from the Lock Screen, updatable via push, geofenced for location-aware delivery.
+
+### When to use
+
+- **Loyalty cards / status tiers** — gold/silver/bronze membership, points balance, expiring rewards.
+- **Event tickets** — concerts, screenings, app-organized meetups.
+- **Boarding passes** — flights, transit (long-distance bus, ferry, train).
+- **Coupons / offers** — time-limited, redeemable in store.
+- **Store cards** — gift cards, membership cards.
+- **Punch cards** — "buy 9, get 1 free" coffee-shop pattern.
+
+### Why it's a polish opportunity
+
+Wallet passes are **visual** — branded, optionally animated subtly (the Apple Card chip rotates), **geofenced** to appear on the Lock Screen at relevant locations, and **push-updated** to reflect real-time state (your gate, your tier, your remaining balance).
+
+A gold-tier loyalty card pulled from Wallet on the Lock Screen at the right Starbucks creates the same dopamine as physical status.
+
+### Implementation overview
+
+```swift
+import PassKit
+
+// 1. Create the .pkpass file on your server (JSON + assets, signed by your Pass Type Certificate).
+// 2. Deliver the .pkpass URL or data to the device.
+// 3. Use PKAddPassesViewController to add it.
+
+let pass = try PKPass(data: passData)
+let vc = PKAddPassesViewController(pass: pass)
+viewController.present(vc, animated: true)
+```
+
+### Pass design rules
+
+| Rule | Detail |
+| --- | --- |
+| **Pass style matters** | `storeCard`, `generic`, `eventTicket`, `boardingPass`, `coupon` — each has system layout |
+| **Background image** | Full-bleed art at 320×460pt. Pick OKLCH-balanced colors (see [the-final-5-percent §5](../the-final-5-percent/SKILL.md#5-color--material)) |
+| **Logo + label** | Top-left. 160pt wide max. Keep simple |
+| **Primary field** | The big number — points, balance, tier |
+| **Secondary fields** | 2–3 supporting stats |
+| **Auxiliary fields** | Smaller — dates, member-since |
+| **Strip image** (optional) | Behind primary field — branding flair |
+| **Barcode** | QR or Aztec for redemption, only if relevant |
+
+### Push updates — keep passes alive
+
+Register a web service URL with the pass. When data changes (new tier, new balance), your server sends an APNs push. Wallet refreshes the pass quietly; the new state appears next time the user opens it.
+
+```json
+{
+    "webServiceURL": "https://api.yourapp.com/wallet/",
+    "authenticationToken": "<unique-per-pass>"
+}
+```
+
+### Geofencing — appear at the right moment
+
+```json
+{
+    "locations": [
+        { "latitude": 37.7749, "longitude": -122.4194,
+          "relevantText": "Show this at checkout" }
+    ],
+    "relevantDate": "2026-06-15T19:00:00Z"
+}
+```
+
+Wallet surfaces the pass on the Lock Screen when the user is near the location OR the date is approaching. The user can swipe from the bottom-right to see it. Pure magic for loyalty / event UX.
+
+### Anti-patterns
+
+- **Static pass that never updates.** Pointless — could've been a screenshot. Always wire push.
+- **Promotional pass with no real value.** Wallet is intimate. Don't pollute.
+- **Pass for one-time use with a stale barcode.** Generate dynamically.
+- **Generic art that looks like every other coupon.** Brand visibly.
+
+### Reference
+
+- [Apple — Wallet Developer Guide](https://developer.apple.com/documentation/walletpasses)
+- [Apple — PassKit framework](https://developer.apple.com/documentation/passkit)
+
+---
+
+## 15. Live Activities for urgency — the Explode pattern
+
+A specific Live Activity pattern that drives conversion: **time-limited offer countdown on the Lock Screen and Dynamic Island**. The app Explode uses this to surface a "free premium for 2 hours after sharing" timer. The user sees their timer counting down whenever they glance at their phone — high urgency, zero friction to act.
+
+```swift
+struct PremiumOfferAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        var expiresAt: Date
+    }
+    var offerTitle: String
+}
+
+// Compact DI: just a countdown
+DynamicIsland {
+    DynamicIslandExpandedRegion(.center) {
+        VStack {
+            Text(context.attributes.offerTitle).font(.headline)
+            Text(timerInterval: now...context.state.expiresAt, countsDown: true)
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .monospacedDigit()
+        }
+    }
+} compactLeading: {
+    Image(systemName: "sparkles")
+} compactTrailing: {
+    Text(timerInterval: now...context.state.expiresAt, countsDown: true)
+        .font(.system(.body, design: .rounded, weight: .semibold))
+        .monospacedDigit()
+} minimal: {
+    Image(systemName: "sparkles")
+}
+```
+
+`Text(timerInterval:countsDown:)` auto-updates without manual animation — built into ActivityKit. The countdown ticks in the user's peripheral vision all day.
+
+**Anti-pattern**: don't abuse this. A "limited offer" Live Activity that's actually always-available wears trust thin and gets your app reported. Reserve for genuinely time-bound moments.
+
+---
+
+## 16. Push notification timing & content — Bier's rules
+
+A great notification is **dopamine delivered**. A bad one is **nagging delivered**. Full copywriting patterns live in [chat-and-messaging §5](../chat-and-messaging/SKILL.md#5-color--material) (notification copywriting subsection); the high-level rules:
+
+| ❌ Bad | ✅ Good |
+| --- | --- |
+| "You haven't opened the app in 3 days" | "Sam just sent you a message" |
+| "Don't lose your streak!" | "🔥 7-day streak — open to keep it" |
+| "We miss you" | "Alice tagged you in a memory" |
+| "New features available" | "Voice messages are live in your chats" |
+| "Update available" | "Your morning recap is ready" |
+
+### Send rules
+
+- **Only at peak engagement times** — morning commute (7–9am local), lunch (12–1pm), after work (5–7pm), pre-sleep (9–10pm). NEVER overnight (10pm–7am).
+- **Every notification must make the user feel positive.** If you wouldn't want a friend to send this to you, don't send it.
+- **Cluster fatigue** — never within 5 minutes of a prior notification.
+- **Communication Notifications API** — use it for every person-to-person notification. Avatars on Lock Screen, sender name (not app name) in title.
+
+### `interruptionLevel` — choose carefully
+
+| Level | Use |
+| --- | --- |
+| `.passive` | Background updates, summaries — bundles in Apple Intelligence summary, doesn't ring |
+| `.active` | DEFAULT — standard notifications during DND windows are suppressed |
+| `.timeSensitive` | Genuinely urgent person-to-person — pierces some focus modes |
+| `.critical` | Emergency / safety — requires special entitlement; bypasses all silencing |
+
+Most notifications should be `.active`. Escalate `.timeSensitive` only when the user expects the message NOW (incoming call, urgent direct mention). Abuse drops your interruption privileges fast.
+
+---
+
+## 17. Picture-in-Picture for guided onboarding
+
+A Bier pattern that's wildly underused: when onboarding requires the user to leave your app (copy a code from email, allow a permission in Settings, follow a link to a partner site), use Picture-in-Picture to keep YOUR app visible in a floating window.
+
+The user follows your steps WITHOUT context-switching — they see "Now tap Allow" overlaid on the Settings app.
+
+```swift
+import AVKit
+
+// Use AVPlayerLayer with a looping video showing your guidance,
+// OR a CALayer wrapping custom content rendered to a CMSampleBuffer
+let pipController = AVPictureInPictureController(playerLayer: playerLayer)
+pipController?.delegate = self
+pipController?.startPictureInPicture()
+```
+
+Render your guidance UI into the video (or content layer). Users complete cross-app flows 3–5× more reliably with PiP guidance vs. without.
+
+**Best for**:
+- Permission flows that require Settings.app navigation
+- SMS verification code copy/paste flows
+- Cross-app onboarding (e.g., "Link your Spotify account")
+- Tutorial videos that the user can keep visible while exploring
+
+**Anti-pattern**: trapping the user in PiP. Always include a clear "Got it / Dismiss" affordance in your PiP UI, and tear it down the moment the user re-enters your app.
+
+---
+
+## 18. App Clips — try-before-install
+
+App Clips are a < 10MB slice of your app that runs WITHOUT full install. Tap an NFC tag, scan a QR, tap a link in Messages — the relevant slice loads instantly, the user experiences value, then the full app prompt appears.
+
+**Viral use cases**:
+- **Group invites** — user shares "join my group" link → recipient joins via App Clip without installing.
+- **Event RSVP** — open a link → see event details + RSVP in an App Clip.
+- **Shareable content viewer** — photo, video, or score viewable in App Clip; install for full features.
+- **One-time purchases** — pay-to-park, pay-to-rent, pay-once experiences.
+
+This is the Bier playbook: **deliver value BEFORE asking for install commitment**.
+
+### App Clip card design
+
+Apple-controlled but configurable:
+- Title, subtitle, hero image (1800×1200pt)
+- Action button label ("Get Started", "Order Now", "View Event")
+- Card colors / scheme
+
+```swift
+// In your App Clip target's Info.plist, configure:
+// NSAppClip > NSAppClipRequestEphemeralUserNotification = YES
+// (Lets you request 1-hour notifications without full permission)
+```
+
+### Combine with other peripheral surfaces
+
+- **Smart App Banners** on websites → App Clip when tapped
+- **Apple Wallet pass attachments** → App Clip on pass tap
+- **Communication Notifications** with App Clip card in iMessage → join group without install
+
+App Clip + Wallet pass + Live Activity is a triple-surface viral loop: friend sends invite via Messages → opens as App Clip → joins the event → gets a Wallet pass with geofenced reminder → Live Activity on the event day. Three peripheral surfaces, one viral flow, zero install friction.
+
+### Anti-patterns
+
+- **App Clip that requires sign-up before showing value.** Defeats the entire point.
+- **App Clip > 10MB.** Apple rejects it; the experience won't be invokable from NFC/QR.
+- **App Clip that's a marketing teaser instead of real functionality.** Users tap, get nothing useful, never install.
+
+---
+
 ## Animation curves cheat sheet (cross-surface)
 
 | Surface | Curve | Notes |
@@ -2787,11 +3104,14 @@ The Delight-Impact Curve: rare interactions deserve theatrical moments; frequent
 | [§8](#8-haptics--sensoryfeedback) | Haptics — `.sensoryFeedback` and CoreHaptics combos |
 | [§9](#9-sound-design) | Sound design — when, what, how loud |
 | [§10](#10-touch--gesture-polish) | Touch & gesture polish |
+| — | **Buttons & CTAs** — sizing system, variants, states, copy, sticky/floating/scroll-react, fully-tappable rows |
+| — | **Sheets, detents, popovers, share sheets** — sheet anatomy, when to use which, multiple sheets, ShareLink |
 | [§11](#11-image--media-polish) | Image & media polish — fade-in, blurhash, vignettes |
 | [§12](#12-loading-states) | Loading states — skeletons, shimmers, optimistic UI |
 | [§13](#13-empty-states) | Empty states — first impressions |
 | [§14](#14-celebrating-completions) | Celebrating completions — confetti theory |
-| [§15](#15-onboarding-polish) | Onboarding polish |
+| — | **Shareable image generation** — `ImageRenderer`, MeshGradient share cards, curiosity-gap framing, K-factor virality |
+| [§15](#15-onboarding-polish) | Onboarding polish — 3-second rule, "keep what you made," distracted-usage design |
 | [§16](#16-paywall-polish) | Paywall polish |
 | [§17](#17-settings-polish) | Settings polish |
 | [§18](#18-microcopy--voice) | Microcopy & voice |
@@ -4091,6 +4411,528 @@ For multi-line text where Return should insert a newline, don't override — let
 
 ---
 
+## Buttons & CTAs
+
+Buttons are the most-pressed surface in your app. A great button — clear hierarchy, precise press feel, satisfying haptic, label that morphs with state — separates a polished app from a generic one more than almost anything else.
+
+### Sizing system
+
+Five sizes, all multiples of the 4pt grid:
+
+| Size | Height | Horizontal pad | Font | Use |
+| --- | --- | --- | --- | --- |
+| `xs` (chip) | 28pt | 12pt | 13pt semibold | Filter chips, segmented controls |
+| `sm` | 32pt | 16pt | 14pt semibold | Toolbar actions, secondary inline |
+| `md` (default) | 44pt | 20pt | 15pt semibold | Standard buttons, form actions |
+| `lg` | 52pt | 24pt | 17pt semibold | Section CTAs, key actions |
+| `xl` (hero) | 60pt | 28pt | 17pt bold | Paywall CTA, primary onboarding |
+
+**Corner radius scales** with size: 8pt (xs/sm), 12pt (md), 14pt (lg), 16pt (xl). Use `RoundedRectangle(cornerRadius:, style: .continuous)` for the squircle shape.
+
+**Rule**: tap target ≥ 44pt ALWAYS. Visual size can be smaller (32pt chip with `.frame(minHeight: 44).contentShape(Rectangle())`).
+
+### Variants — the hierarchy
+
+| Variant | Fill | Border | Text | Use |
+| --- | --- | --- | --- | --- |
+| **Primary** | `tint` (accent) | none | white | ONE per screen — the main action |
+| **Secondary** | `tint.opacity(0.12)` | none | `tint` | Supporting alternatives |
+| **Tertiary** (ghost) | clear | none | `tint` | Quick actions, "Skip", "Maybe later" |
+| **Destructive (filled)** | `.red` | none | white | Confirmed destructive primary |
+| **Destructive (text)** | clear | none | `.red` | Destructive option in a list |
+| **Icon-only** | `tint.opacity(0.1)` or clear | none | `tint` | Square 44×44pt with `.accessibilityLabel` |
+
+**The Linear rule**: tint ONE thing per screen. When everything is tinted, nothing stands out. Secondary actions stay neutral.
+
+### States — six total
+
+```swift
+enum ButtonState {
+    case rest          // default
+    case pressed       // visual press feedback
+    case loading       // async action in progress
+    case disabled      // unavailable (with a reason)
+    case success       // momentary confirmation
+    case error         // momentary failure
+}
+```
+
+**Loading state pattern** — label morphs into spinner inline, button KEEPS its width (no layout shift):
+
+```swift
+@State private var stableWidth: CGFloat?
+
+ZStack {
+    if isLoading {
+        ProgressView()
+            .controlSize(.small)
+            .tint(.white)
+    } else {
+        Text(label)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { newWidth in
+                if stableWidth == nil { stableWidth = newWidth }
+            }
+    }
+}
+.frame(minWidth: stableWidth)  // locked once measured
+.contentTransition(.opacity)
+.animation(.snappy(duration: 0.22), value: isLoading)
+```
+
+**Success state** — verb past-tense + symbol replace, auto-revert after 1.5s:
+
+```swift
+HStack(spacing: 6) {
+    Image(systemName: showSuccess ? "checkmark" : "square.and.arrow.down")
+        .contentTransition(.symbolEffect(.replace))
+    Text(showSuccess ? "Saved" : "Save")
+}
+.sensoryFeedback(.success, trigger: showSuccess)
+.task(id: showSuccess) {
+    if showSuccess {
+        try? await Task.sleep(for: .seconds(1.5))
+        showSuccess = false
+    }
+}
+```
+
+**Disabled state**: ALWAYS pair with a reason. A grayed-out button with no explanation is hostile. Either show inline help text below ("Enter your email to continue") or a tooltip on tap.
+
+### Press states — the SwiftUI ButtonStyle pattern
+
+```swift
+struct ScaleButtonStyle: ButtonStyle {
+    var feedback: SensoryFeedback = .impact(weight: .light)
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(
+                .spring(duration: 0.16, bounce: 0),
+                value: configuration.isPressed
+            )
+            .sensoryFeedback(feedback, trigger: configuration.isPressed) { _, new in
+                new == true   // only fire on press-DOWN, not release
+            }
+    }
+}
+
+Button("Continue") { ... }
+    .buttonStyle(ScaleButtonStyle())
+```
+
+**Press-down haptic is non-negotiable for premium feel.** The haptic fires the instant the finger touches — before the user lifts. Apple's first-party buttons all do this. The user reads it subconsciously as "the button heard me."
+
+### CTA copywriting — verbs win
+
+| ❌ Bad | ✅ Good | Why |
+| --- | --- | --- |
+| Submit | Save Photo | Specific action, not generic |
+| Confirm | Delete Photo | Names what will happen, especially destructive |
+| Continue | Add to Cart, $24.99 | Continues TO what? State the destination |
+| OK | Got it / Done | "OK" is forms-speak |
+| Proceed | Next, Step 3 of 5 | Forms-speak |
+| Click here | (button label is enough) | Buttons don't need "click here" |
+| Send | Send to Sam | Personalize when possible |
+| Loading… | Saving… | Verb form of the action in progress |
+| Done | Saved | Past tense of the action just completed |
+| Error | Try Again | Reframe failure as recoverable |
+| Get Started | Take Your First Photo | What does "start" even mean? |
+| Learn More | See How It Works | "More" is empty calories |
+| Sign Up | Create Account | Specific outcome |
+| Buy | Buy for $9.99 | Always show the price |
+| Yes / No | Use specific verbs | "Delete Photo" / "Keep" |
+
+**State-aware label morphing** (the polish detail):
+
+| State | Label | Icon |
+| --- | --- | --- |
+| Rest | "Save Photo" | `square.and.arrow.down` |
+| Pressed | "Save Photo" (no text change, only scale) | same |
+| Loading | "Saving…" or hide label, show spinner | spinner |
+| Success | "Saved" | `checkmark` |
+| Error | "Try Again" | `exclamationmark.triangle` |
+
+Use `.contentTransition(.numericText())` (works for text crossfade too) and `.contentTransition(.symbolEffect(.replace))` for the icon morph.
+
+### Sticky / floating / fixed buttons
+
+**Sticky bottom CTA bar** (forms, checkout, paywall):
+
+```swift
+ScrollView { content }
+.safeAreaInset(edge: .bottom) {
+    Button(action: continueAction) {
+        Text("Continue")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(Color.accentColor, in: .rect(cornerRadius: 14, style: .continuous))
+    }
+    .buttonStyle(ScaleButtonStyle())
+    .padding(.horizontal, 16)
+    .padding(.bottom, 16)
+    .background(.bar)  // semantic blur — adapts to iOS 26 Liquid Glass
+}
+```
+
+**Floating action button (FAB)** — bottom-trailing:
+
+```swift
+.overlay(alignment: .bottomTrailing) {
+    Button(action: newItem) {
+        Image(systemName: "plus")
+            .font(.system(size: 22, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 56, height: 56)
+            .background(Color.accentColor, in: Circle())
+            .shadow(color: .accentColor.opacity(0.35), radius: 12, x: 0, y: 6)
+    }
+    .padding(.trailing, 16)
+    .padding(.bottom, 88)  // above tab bar
+    .buttonStyle(ScaleButtonStyle(feedback: .impact(weight: .medium)))
+}
+```
+
+**Tinted shadow** (`.accentColor.opacity(0.35)`) — not pure black. Premium apps shadow with the element's color, not generic gray. See §5.
+
+### Scroll-react buttons — appear/disappear on scroll
+
+The pattern: button hides when scrolling DOWN (out of the way), shows when scrolling UP (likely to tap). Used in Instagram, X, Threads.
+
+```swift
+@State private var isVisible = true
+@State private var lastOffset: CGFloat = 0
+
+ScrollView { content }
+.onScrollGeometryChange(for: CGFloat.self) { geometry in
+    geometry.contentOffset.y
+} action: { _, newOffset in
+    let delta = newOffset - lastOffset
+    if abs(delta) > 8 {
+        withAnimation(.spring(duration: 0.32, bounce: 0)) {
+            isVisible = delta < 0  // scrolling up = visible
+        }
+        lastOffset = newOffset
+    }
+}
+.overlay(alignment: .bottom) {
+    if isVisible {
+        bottomCTABar
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}
+```
+
+**"Back-to-top" button**: appears after scrolling > 800pt down. Tap scrolls smoothly to top with `withAnimation` + `ScrollViewReader.scrollTo`. Apple News and the App Store both have this.
+
+### Fully tappable cells & rows
+
+The `.contentShape(Rectangle())` trick is essential. Without it, taps register only on the visual content of a row — empty space within the cell does nothing. With it, the entire row is tappable, including padding.
+
+```swift
+HStack {
+    Image(systemName: "person.circle")
+    VStack(alignment: .leading) {
+        Text("Sam Chen")
+        Text("Engineer").foregroundStyle(.secondary)
+    }
+    Spacer()
+    Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+}
+.padding()
+.contentShape(Rectangle())    // ← makes the WHOLE row tappable
+.onTapGesture { openProfile() }
+```
+
+**Row with primary tap + accessory tap** — outer tap opens detail, inner button fires its own action without bubbling. Use `Button` for the inner action — it natively captures the tap:
+
+```swift
+HStack {
+    profileInfo
+    Spacer()
+    Button("Follow") { follow() }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.small)
+}
+.contentShape(Rectangle())
+.onTapGesture { openProfile() }
+```
+
+The `Button` claims its hit area; the outer `onTapGesture` only fires when the user taps outside the button. This pattern is iMessage/Instagram-standard for follower rows.
+
+### Liquid Glass buttons (iOS 26)
+
+For floating action controls — toolbar items, FABs, picker controls — Liquid Glass is the new default surface.
+
+```swift
+Button("New") { newItem() }
+    .padding(.horizontal, 20)
+    .padding(.vertical, 12)
+    .glassEffect(.regular.tint(.accentColor).interactive())
+```
+
+**Rules:**
+- **Only primary actions get `.tint(...)`.** Secondary glass buttons stay clear (`.glassEffect(.regular)`).
+- **`.interactive()` adds the bounce + shimmer on tap** — don't double up with your own `ButtonStyle` scale effect.
+- **Don't use glass for buttons on glass surfaces** (e.g., nav bar glass + button glass) — visual mush.
+- **Fall back gracefully** for iOS 25 and below:
+
+```swift
+@ViewBuilder
+func glassOrFilled(_ tint: Color) -> some View {
+    if #available(iOS 26.0, *) {
+        self.glassEffect(.regular.tint(tint).interactive())
+    } else {
+        self.background(tint, in: .capsule)
+    }
+}
+```
+
+### Button animation polish
+
+The three motions worth getting right:
+
+1. **Press feedback** (touch-down): scale 0.96, opacity 0.85, 0.16s spring with `bounce: 0`. Haptic `.impact(weight: .light)`.
+2. **Release** (touch-up): back to 1.0 with slight overshoot (`.spring(duration: 0.3, bounce: 0.25)`). NO additional haptic on release.
+3. **State transition** (rest → loading → success): `.contentTransition` with width locked, `.symbolEffect(.replace)` on the icon, optional `.sensoryFeedback(.success, trigger:)` on completion.
+
+### Button anti-patterns
+
+- **Multiple primary buttons on one screen.** Pick one.
+- **A "Submit" button.** What does it submit? Be specific.
+- **Buttons without press feedback.** Tap a button — does it react? If no, it feels broken.
+- **Loading states that resize the button.** Lock width before showing the spinner.
+- **Disabled state with NO indication of WHY.** Show a hint: "Enter your email to continue."
+- **Destructive buttons that look like primary.** Red, or red-text — visually distinct.
+- **FABs that obscure content.** Move out of the way on scroll.
+- **Custom spinner inside the button.** Use system `ProgressView()`.
+- **A keyboard shortcut on a button label.** That's for menu items. Buttons are tapped.
+- **`.sensoryFeedback` on release instead of press-down.** The feedback should match the moment of intent (touch-down), not the moment of release.
+
+---
+
+## Sheets, detents, popovers, share sheets
+
+Modal presentation is one of iOS's most expressive primitives. Used well, it preserves context and feels natural. Used badly, it disorients the user and feels like a series of pop-up boxes.
+
+### Sheet anatomy — `.sheet(isPresented:)`
+
+```swift
+.sheet(isPresented: $showing) {
+    SheetContent()
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(.thinMaterial)
+        .presentationCornerRadius(28)
+        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+}
+```
+
+| Modifier | What it does |
+| --- | --- |
+| `.presentationDetents([.medium, .large])` | Sheet snaps to specified heights; user can drag between |
+| `.presentationDetents([.fraction(0.3)])` | Custom — 30% of screen height |
+| `.presentationDetents([.height(280)])` | Custom — fixed point height |
+| `.presentationDragIndicator(.visible)` | Shows the small grab handle at top |
+| `.presentationBackground(...)` | `.regularMaterial`, `.thinMaterial`, or a color |
+| `.presentationCornerRadius(28)` | iOS 16.4+ — overrides system 10pt corner |
+| `.presentationBackgroundInteraction(.enabled(upThrough:))` | Allow taps on content BEHIND the sheet up to a detent |
+
+### When to use sheets vs push vs full modal
+
+| Pattern | Use for |
+| --- | --- |
+| **Sheet** | Transient actions: compose, confirm, pick, share. User returns to current context. |
+| **Push (NavigationStack)** | Drilling into a hierarchy: list → detail → sub-detail. Going BACK is the metaphor. |
+| **Full modal (`.fullScreenCover`)** | Wholly different mode: camera capture, video player, immersive media. NOT for navigation. |
+| **Popover (`.popover`)** | Anchored UI on iPad. On iPhone, popovers degrade to sheets automatically. |
+| **Menu (`.menu`)** | < 6 quick actions. NO custom UI. |
+| **Confirmation dialog** | 1–3 destructive/confirmation choices. NO additional content. |
+| **Alert** | Critical, blocking, single-message — almost never the right choice. |
+
+### Sheet sizing patterns
+
+| Sheet purpose | Detent | Rationale |
+| --- | --- | --- |
+| Quick confirm | `.fraction(0.25)` or `.height(220)` | Small — single decision |
+| Picker / selector | `.medium` | Half-screen — enough to scan options |
+| Filter / settings | `.medium` initially, allow drag to `.large` | Start compact, allow expansion |
+| Multi-step form | `.large` | Full real estate for inputs |
+| Share preview | `.medium` (system default for ShareLink) | Apple's convention |
+| Compose / write | `.large` | Writing benefits from screen space |
+
+**Critical rule** (from Family Values + design-with-taste, also referenced in §12): stacked sheets MUST have visibly different heights. A confirm-sheet over a settings-sheet needs 2 distinct sizes — otherwise the user loses spatial orientation.
+
+```swift
+.sheet(isPresented: $showSettings) {
+    SettingsView()
+        .presentationDetents([.fraction(0.7)])
+        .sheet(isPresented: $showConfirm) {
+            ConfirmView()
+                .presentationDetents([.fraction(0.3)])  // visibly smaller
+        }
+}
+```
+
+### Sheet polish details
+
+**The grab handle** (`.presentationDragIndicator(.visible)`): show it when the sheet is draggable or dismissable by gesture. Hide it for sheets with a custom close button or fixed height.
+
+**The corner radius**: iOS 16.4+ exposes `.presentationCornerRadius(...)`. System default is 10pt; brands often want 16–28pt. Match your card corner radius for consistency.
+
+**The background**: `.thinMaterial` (default) lets content behind show through subtly. `.regularMaterial` is more opaque. Solid color works too. For iOS 26 Liquid Glass apps, the sheet picks up Liquid Glass automatically — don't fight it.
+
+**Pass-through interaction**: `.presentationBackgroundInteraction(.enabled(upThrough: .medium))` lets the user keep tapping on the map / chart behind the sheet while it's open at medium detent. Essential for Maps, Music's mini-player, Apple Find My.
+
+### Multiple sheets — iOS 17+ native stacking
+
+iOS 17+ supports stacking sheets via nested `.sheet` modifiers. Pre-17, you had to chain or use a state machine. Now:
+
+```swift
+.sheet(isPresented: $showA) {
+    AView()
+        .sheet(isPresented: $showB) {   // stacks ON TOP of A
+            BView()
+        }
+}
+```
+
+Each layer animates in/out independently. Apply the visibly-different-heights rule (above).
+
+### Popovers — `.popover`
+
+```swift
+.popover(isPresented: $showing, arrowEdge: .bottom) {
+    PopoverContent()
+        .frame(idealWidth: 320, idealHeight: 240)
+        .presentationCompactAdaptation(.popover)  // iOS 16.4+ — stays a popover on iPhone
+}
+```
+
+**On iPhone, popovers default to sheets.** Force popover behavior with `.presentationCompactAdaptation(.popover)` — sparingly. The system default usually serves iPhone users better (sheets are more thumb-friendly).
+
+**Use popovers for**: small anchored controls (color picker, date picker, "more info" hover-style content). NOT for forms, NOT for navigation.
+
+### Share sheets — `ShareLink`
+
+The iOS 16+ way. `ShareLink` auto-detects share previews and integrates with the system share sheet.
+
+```swift
+ShareLink(item: photo.url) {
+    Label("Share Photo", systemImage: "square.and.arrow.up")
+}
+```
+
+**With a custom preview** (recommended for premium feel):
+
+```swift
+ShareLink(
+    item: shareImage,
+    preview: SharePreview(
+        "My run this morning",
+        image: shareImage,
+        icon: Image("AppIcon")
+    )
+)
+```
+
+The `SharePreview` shows in the share sheet header AND in Communication Notifications (Messages will show your custom title and image when forwarded).
+
+**For data needing `Transferable` conformance**:
+
+```swift
+struct WorkoutShare: Transferable {
+    let title: String
+    let image: UIImage
+    let data: Data
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .png) { workout in
+            workout.image.pngData() ?? Data()
+        }
+        ProxyRepresentation(exporting: \.title)
+    }
+}
+```
+
+### `UIActivityViewController` for advanced cases
+
+When `ShareLink` isn't enough (custom activities, source items per activity type, exclusion lists):
+
+```swift
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    let excludedTypes: [UIActivity.ActivityType] = [.assignToContact]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let vc = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        vc.excludedActivityTypes = excludedTypes
+        return vc
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
+}
+```
+
+Use `ShareLink` 95% of the time. `UIActivityViewController` for the 5%.
+
+### Confirmation dialogs — destructive actions
+
+```swift
+.confirmationDialog(
+    "Delete \"\(photo.title)\"?",
+    isPresented: $showDelete,
+    titleVisibility: .visible
+) {
+    Button("Delete Photo", role: .destructive) { delete() }
+    Button("Cancel", role: .cancel) { }
+} message: {
+    Text("This can't be undone.")
+}
+.sensoryFeedback(.warning, trigger: showDelete)
+```
+
+**Polish details**:
+- Title NAMES the action: `Delete "Sunset.jpg"?` not `Are you sure?`
+- Destructive button uses the VERB: `Delete Photo` not `Confirm`
+- Optional message gives context: `This can't be undone.`
+- Cancel is ALWAYS the last/safe option
+- `.role: .destructive` colors the button red automatically
+- Fires `.warning` sensory feedback when presented
+
+### Menus — `.menu`
+
+Lightweight, < 6 actions, no custom UI:
+
+```swift
+Menu {
+    Button("Save to Photos", action: save)
+    Button("Copy", action: copy)
+    Divider()
+    Button("Delete", role: .destructive, action: delete)
+} label: {
+    Label("More", systemImage: "ellipsis.circle")
+}
+```
+
+Compared to context menus (long-press, see §7), menus are EXPLICITLY triggered by tapping a control. Use for discoverable "..." or "more" actions visible on the screen.
+
+### Sheet anti-patterns
+
+- **Sheets used for primary navigation.** Navigation is push. Sheets are transient.
+- **Alerts as confirmation.** Use `.confirmationDialog` — better polish, more flexible.
+- **Multiple sheets at the same height.** Spatial confusion.
+- **Sheets with no drag indicator AND no close button.** User can't see how to dismiss.
+- **Custom dismiss button instead of native drag.** Both is fine; replacing native dismiss with custom is anti-pattern.
+- **Popovers on iPhone forced via `.popover` without testing.** Test sheet adaptation first.
+- **`UIActivityViewController` when `ShareLink` would do.** ShareLink is the modern primitive.
+- **Confirmation dialog with "Are you sure?" copy.** Name the action specifically.
+
+---
+
 ## 11. Image & media polish
 
 ### Fade-in on load
@@ -4422,9 +5264,196 @@ KeyframeAnimator(initialValue: AnimationValues()) { values in
 
 ---
 
+## Shareable image generation — virality engineering
+
+The single most under-used iOS API for consumer apps: `ImageRenderer`. Strava activity cards, Spotify Wrapped slides, Apple Fitness ring closures, Duolingo streak shares, BeReal posts — they all use this. A user taps "share my run," your app instantly generates a beautifully-designed image branded with your app, the user posts it to Instagram Stories, their friends see it, ask "what app?", install. Free user acquisition, baked into the product.
+
+### The pattern
+
+1. User achieves something (streak, milestone, stat, photo, score).
+2. App auto-generates a beautifully-branded image.
+3. One-tap share to Stories / iMessage / WhatsApp via `ShareLink`.
+4. Image contains: the achievement (hero), the user's name, app logo (subtle), brand colors, a "join me on [App]" or similar footer.
+5. Friend sees the post → curiosity → downloads → loop continues.
+
+This is the **K-factor pattern** (see [nikita-bier-consumer-apps](../../README.md) for the strategy side): each share is a free impression to the user's network.
+
+### `ImageRenderer` — iOS 16+ native
+
+`ImageRenderer` renders any SwiftUI view to a `UIImage` or `CGImage` offscreen.
+
+```swift
+import SwiftUI
+
+@MainActor
+func generateShareImage(for run: Run) async -> UIImage? {
+    let view = RunShareCard(run: run, userName: user.name, userAvatar: user.avatar)
+        .frame(width: 1080, height: 1920)  // Instagram Story aspect
+
+    let renderer = ImageRenderer(content: view)
+    renderer.scale = UIScreen.main.scale     // crisp on Retina
+    renderer.proposedSize = .init(width: 1080, height: 1920)
+    return renderer.uiImage
+}
+```
+
+**Critical**: must run on `@MainActor` (SwiftUI rendering requires it). `renderer.scale` controls pixel density — `3.0` for iPhone Retina, or `UIScreen.main.scale` for adaptive.
+
+### Design rules for share cards
+
+| Rule | Why |
+| --- | --- |
+| **9:16 (1080×1920)** is the default | Instagram Stories, TikTok, Snapchat all share this format |
+| **1:1 (1080×1080)** as fallback | Twitter/X, Threads, general social. Generate both, let user pick |
+| **Hero = the achievement** | The stat, photo, or moment is the largest element. Not the app logo |
+| **Brand watermark is SUBTLE** | App icon + name in a corner at ~40% opacity. Never shouting |
+| **Personalization** | User's name, their data, their photo. Generic cards underperform 3–5× vs personalized |
+| **MeshGradient background** | See §5 — organic, branded, doesn't band when re-uploaded |
+| **Brand color, restrained** | One accent visible. Not a rainbow |
+| **"Join me on [App]" footer** | Small, optional. Drives K-factor without feeling spammy |
+| **NO QR codes by default** | They date the design and feel like marketing. Use a short link in the App Store URL instead |
+
+### A reference `RunShareCard`
+
+```swift
+struct RunShareCard: View {
+    let run: Run
+    let userName: String
+    let userAvatar: UIImage?
+
+    var body: some View {
+        ZStack {
+            // 1. Background — MeshGradient with brand colors
+            MeshGradient(
+                width: 2, height: 2,
+                points: [[0,0], [1,0], [0,1], [1,1]],
+                colors: [.brandBlue, .brandIndigo, .brandPurple, .brandPink]
+            )
+
+            // 2. Subtle noise overlay for richness
+            Image("noise-1024").resizable(resizingMode: .tile)
+                .opacity(0.05).blendMode(.overlay)
+
+            // 3. Content
+            VStack(spacing: 32) {
+                Spacer()
+
+                // Hero stat
+                Text(run.distance.formatted(.measurement(width: .abbreviated)))
+                    .font(.system(size: 140, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.6)
+
+                Text("morning run")
+                    .font(.system(size: 32, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.8))
+
+                // Secondary stats
+                HStack(spacing: 40) {
+                    StatItem(value: run.pace, label: "PACE")
+                    StatItem(value: run.duration, label: "TIME")
+                    StatItem(value: run.elevation, label: "ELEV")
+                }
+
+                Spacer()
+
+                // User attribution + app footer
+                HStack(spacing: 12) {
+                    if let avatar = userAvatar {
+                        Image(uiImage: avatar)
+                            .resizable().frame(width: 56, height: 56)
+                            .clipShape(Circle())
+                    }
+                    VStack(alignment: .leading) {
+                        Text(userName).font(.system(size: 20, weight: .semibold))
+                        Text("Made with [AppName]")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                    Spacer()
+                    Image("AppIconWhite")
+                        .resizable().frame(width: 40, height: 40)
+                        .opacity(0.6)
+                }
+                .foregroundStyle(.white)
+                .padding(.bottom, 40)
+            }
+            .padding(.horizontal, 60)
+        }
+        .frame(width: 1080, height: 1920)
+    }
+}
+```
+
+### Save + share flow
+
+```swift
+@MainActor
+func shareRun(_ run: Run) async {
+    guard let image = await generateShareImage(for: run) else { return }
+    self.shareImage = image
+    self.isShareSheetPresented = true
+}
+
+// In view body
+.sheet(isPresented: $isShareSheetPresented) {
+    if let image {
+        ShareLink(
+            item: Image(uiImage: image),
+            preview: SharePreview("My run today", image: Image(uiImage: image))
+        )
+    }
+}
+```
+
+### Curiosity-gap framing — the Bier pattern
+
+The shared image should **reveal enough to spark interest, hide enough to require the app**. Examples:
+
+- **tbh/Gas**: image shows "Someone said you're the best dressed" but you must install to see WHO.
+- **Strava**: image shows route + distance, but pace/heart-rate details are in-app only.
+- **Duolingo**: image shows the streak number but unlocking next milestone requires the app.
+
+**Don't** include everything in the image — it removes the install incentive.
+
+### Multiple aspect ratios — let users choose
+
+```swift
+enum ShareAspect: Hashable {
+    case story    // 9:16, 1080×1920
+    case square   // 1:1, 1080×1080
+    case feed     // 4:5, 1080×1350
+
+    var size: CGSize {
+        switch self {
+        case .story:  return CGSize(width: 1080, height: 1920)
+        case .square: return CGSize(width: 1080, height: 1080)
+        case .feed:   return CGSize(width: 1080, height: 1350)
+        }
+    }
+}
+```
+
+Show a horizontal preview strip; user taps to switch; renderer regenerates. Each generation takes < 100ms on a recent iPhone.
+
+### Anti-patterns
+
+- **"Spotify Wrapped syndrome"** — one big annual share event. Phantom validation that doesn't drive sustained K-factor. Make your share moments REGULAR — weekly recaps, daily achievements.
+- **Watermarks that dominate** — app logo bigger than the hero data = looks like an ad, not a personal share. Subtle.
+- **Generic share cards (same image for every user)** — dies on social. Always personalize.
+- **QR codes everywhere** — date the design. Use shortlinks in profile bio or App Store metadata.
+- **Forgetting Stories aspect** — 4:5 feed works for Instagram feed but FAILS in Stories (cropped). Default to 9:16.
+- **Static share cards on a live data product** — cards should ALWAYS show latest user data. Re-render on share, never cache.
+
+---
+
 ## 15. Onboarding polish
 
 The onboarding is when the user decides if you're a Real App.
+
+> **The 3-Second Rule (Nikita Bier):** you have three seconds to prove value. If your app doesn't deliver value instantly, it's dead. This is "inverted time-to-value" — instead of waiting for users to discover worth, deliver the payoff immediately. No complex signup before the magic moment. Show value first, ask for investment second.
+
+> **The "Keep what you made" framing (Paul Graham, via Bier):** change the question from "Would you like to use our product?" to "Would you like to keep the thing you just made?" If onboarding produces something valuable to the user (a profile, a generated image, an analysis, a draft), completion rates soar. The user has skin in the game — they don't want to lose their progress.
 
 ### Rules
 
@@ -4433,6 +5462,17 @@ The onboarding is when the user decides if you're a Real App.
 3. **A spring transition between screens** — slide horizontal with a subtle parallax effect on the visual.
 4. **Show, don't tell.** Use visuals (hero images, illustrations, looped video clips) to demo what the app does — not bullet-point lists.
 5. **Permissions deferred.** Don't ask for camera/notifications/contacts during onboarding. Defer until the user is in a context where it makes sense.
+
+### Design for distracted, one-handed, < 2-minute sessions
+
+Most apps will be used in toilet stalls, on subways, between meetings — not in 30-minute focused sessions. Design accordingly:
+
+- **One-handed reachability** — primary actions in the bottom-half of the screen, within thumb reach.
+- **Sessions resumable in < 2 seconds** — when the user reopens after backgrounding, land them exactly where they left off. No "Welcome back" splash, no re-auth.
+- **Zero cognitive load to re-engage** — the home screen of your app must answer "what now?" within one glance. If the user has to think, they leave.
+- **The toilet test** — if your app can't be used while distracted, in poor lighting, with one hand, your retention will suffer.
+
+This is Nikita Bier's "design for distracted usage" rule, and it's a higher bar than most apps realize. Apple Music, Threads, BeReal pass it. Most productivity apps don't.
 
 ### Premium onboarding patterns to study
 
@@ -4845,6 +5885,8 @@ Run this before considering ANY screen done.
 ## 22. Anti-patterns
 
 The list of things that signal "this wasn't considered":
+
+> **If you need a user tour, your app has failed (Nikita Bier).** A coach-marks tour or guided tooltip walk-through is the most common cope for unintuitive UI. The right fix is to rework navigation, hierarchy, empty states, and copywriting until it's abundantly obvious how the app works — even at the sacrifice of power-user efficiency. You need users before you can have power users. Every tour is a flag that the design lost.
 
 1. **`opacity: 0 → 1` modals appearing centered with no spring.** Slide from edge or grow from trigger.
 2. **Spinners under 500ms.** If it loads in 200ms, just show the result.
