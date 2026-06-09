@@ -450,7 +450,7 @@ The wrong font wrecks the whole feel. Defaults that work:
 - **Yellow accent** (`UIColor.systemYellow`) for active controls — the iconic Apple Camera convention. Branded apps replace with their accent, but yellow communicates "active manual control".
 - **Backdrop blurs**: use `UIVisualEffectView` with `.systemUltraThinMaterialDark` for floating control palettes. On iOS 26+, prefer the new `.glassEffect()` modifier or `expo-glass-effect` style Liquid Glass surfaces — but ONLY if your app's overall design language is Liquid Glass. Mixing styles looks broken.
 - **Photo previews**: pure black background. Never a pattern, never a gradient, never a card. Photos against black is iconic for a reason.
-- **Chrome palette via OKLCH**: when designing the camera's accent palette (active controls, mode-selected indicators, focus rings, recording dot), pick all colors at the SAME OKLCH `L` value (e.g., `L=0.7`) so they feel like siblings — no color dominates the chrome. See `the-final-5-percent` §5 for the full workflow. This is what makes Halide and Kino's chrome feel so refined: every active indicator has the same perceived brightness as every other.
+- **Chrome palette via OKLCH (ship as Display P3)**: when designing the camera's accent palette (active controls, mode-selected indicators, focus rings, recording dot), pick all colors at the SAME OKLCH `L` value (e.g., `L=0.7`) so they feel like siblings — no color dominates the chrome — then ship them as `Color(.displayP3, ...)` so vivid reds, yellows, and oranges actually render at full chroma on every Apple device. See `the-final-5-percent` §5 for the full workflow. This combination — OKLCH for perceptual consistency, Display P3 for gamut — is what makes Halide and Kino's chrome feel so refined.
 - **Histograms use perceptual luminance, not RGB.** If your editing UI shows a histogram, the standard RGB histogram is misleading — pure yellow registers high in R+G but the eye sees it as a single value. Compute luminance via OKLCH `L` (or BT.709 luma at minimum) for an accurate exposure read. Photographers will notice.
 
 ### Curiosity-gap sharing — partial reveal for virality
@@ -1349,7 +1349,7 @@ try engine.makePlayer(with: pattern).start(atTime: 0)
 
 ## Color & material
 
-- **Sent bubble**: app's accent color. For iMessage parity: `Color(red: 0.0, green: 0.48, blue: 1.0)` (iMessage blue). For green-bubble nostalgia: `Color(red: 0.21, green: 0.78, blue: 0.35)` (SMS green).
+- **Sent bubble**: app's accent color. For iMessage parity: `Color(.displayP3, red: 0.0, green: 0.48, blue: 1.0)` (iMessage blue). For green-bubble nostalgia: `Color(.displayP3, red: 0.21, green: 0.78, blue: 0.35)` (SMS green). **Always ship hand-coded colors as Display P3** — see `the-final-5-percent` §5 for the OKLCH-pick / P3-ship workflow that applies to every color in this skill.
 - **Received bubble**: `Color(.tertiarySystemGroupedBackground)` (light), `Color(.systemGray5)` (dark).
 - **Background of conversation**: `Color(.systemGroupedBackground)` (light), `Color(.systemBackground)` (dark). Telegram and WhatsApp use a subtle pattern/wallpaper — if you do this, make it OFF by default.
 
@@ -1883,7 +1883,7 @@ struct PremiumWidget: View {
 **Rules:**
 - **Home widgets only.** Lock Screen widgets render in tint-mode (monochrome) — MeshGradient gets flattened and looks broken. Use `.containerBackground(.fill.tertiary, for: .widget)` (semantic) for Lock variants.
 - **Dynamic Island is forbidden from backgrounds.** Apple's HIG: foreground elements only. Never apply MeshGradient or any background fill to a Dynamic Island presentation.
-- **Pick colors in OKLCH** so the mesh feels balanced rather than chaotic. See `the-final-5-percent` §5.
+- **Pick colors in OKLCH and ship as Display P3** — `Color(.displayP3, red:green:blue:)` — so the mesh feels balanced AND renders at the wider gamut on every Apple device since 2017. See `the-final-5-percent` §5 for the full workflow.
 - **Keep text high-contrast.** A MeshGradient background means dynamic colors behind your text. Add a subtle shadow or use `.foregroundStyle(.white)` with a translucent darkening layer if needed for legibility.
 
 ### Anti-patterns
@@ -2715,7 +2715,7 @@ viewController.present(vc, animated: true)
 | Rule | Detail |
 | --- | --- |
 | **Pass style matters** | `storeCard`, `generic`, `eventTicket`, `boardingPass`, `coupon` — each has system layout |
-| **Background image** | Full-bleed art at 320×460pt. Pick OKLCH-balanced colors (see [the-final-5-percent §5](../the-final-5-percent/SKILL.md#5-color--material)) |
+| **Background image** | Full-bleed art at 320×460pt. Pick OKLCH-balanced colors, render at Display P3 in your design tool (see [the-final-5-percent §5](../the-final-5-percent/SKILL.md#5-color--material)) |
 | **Logo + label** | Top-left. 160pt wide max. Keep simple |
 | **Primary field** | The big number — points, balance, tier |
 | **Secondary fields** | 2–3 supporting stats |
@@ -3596,6 +3596,21 @@ Localization, accessibility, and visual polish all improve when you use these.
 
 ## 5. Color & material
 
+### The color rule, in one line
+
+> **Pick in OKLCH. Ship in Display P3. Fall back to sRGB automatically.**
+
+If you're typing `Color(red:, green:, blue:)` without `.displayP3`, you're picking color with one hand tied behind your back. sRGB renders fine on every device, but **every Apple device since 2017 supports Display P3** — a ~30% wider gamut especially in reds and greens. iOS auto-degrades to sRGB on older hardware, so there's no risk to defaulting to P3.
+
+OKLCH solves a different problem: it ensures your palette feels *balanced* (equal `L` looks equally bright across all hues — try the same with HSL and one color always wins).
+
+These are two rules, not one. You want both:
+- **OKLCH** for the picking step → perceptual consistency across the palette.
+- **Display P3** for the rendering step → wider gamut on capable hardware.
+- **sRGB** is the fallback iOS chooses for you → never the destination you author against.
+
+A hand-coded sRGB hex in your codebase is a code smell unless it's matching a third-party brand color that's officially specified in sRGB. Everything else should go through the OKLCH-→-P3 workflow detailed below in this section.
+
 ### True black for OLED
 
 On OLED displays (every iPhone since X), `#000000` literally turns OFF the pixel. This means:
@@ -3766,12 +3781,14 @@ LinearGradient(
 
 Generate stops via [culori](https://culorijs.org/) (Node), [oklch.com](https://oklch.com)'s gradient tool, or any OKLCH library — bake the hex into Swift once.
 
-**4. Use Display P3 for vivid colors.** P3 is a wider gamut than sRGB; reds redder, greens greener. Every Apple device since 2017 supports it. iOS auto-degrades to sRGB on older hardware. Almost no apps bother — free polish win.
+**4. Display P3 is the default — sRGB is a fallback you never type.** P3 is a ~30% wider gamut than sRGB; reds redder, greens greener, especially in vivid brand colors. Every Apple device since 2017 supports it natively, and iOS auto-degrades to sRGB on older hardware — zero risk. Most apps still ship sRGB hex everywhere because someone copy-pasted from a non-iOS tool. Don't.
 
 ```swift
-Color(red: 1.0, green: 0.2, blue: 0.4)                  // sRGB — bounded gamut
-Color(.displayP3, red: 1.0, green: 0.2, blue: 0.4)      // P3 — full screen gamut
+Color(red: 1.0, green: 0.2, blue: 0.4)                  // ❌ sRGB — leaves color on the table
+Color(.displayP3, red: 1.0, green: 0.2, blue: 0.4)      // ✅ P3 — uses the full screen gamut
 ```
+
+**Every hand-coded color in your app should specify `.displayP3` as the color space.** No exceptions for "convenience" — `Color(red:green:blue:)` without it gets you sRGB silently. The `Color(hex:)` helper below uses P3 by default; use it.
 
 **A `Color(hex:)` helper** (keep your codebase clean):
 

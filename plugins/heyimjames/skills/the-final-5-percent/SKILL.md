@@ -547,6 +547,21 @@ Localization, accessibility, and visual polish all improve when you use these.
 
 ## 5. Color & material
 
+### The color rule, in one line
+
+> **Pick in OKLCH. Ship in Display P3. Fall back to sRGB automatically.**
+
+If you're typing `Color(red:, green:, blue:)` without `.displayP3`, you're picking color with one hand tied behind your back. sRGB renders fine on every device, but **every Apple device since 2017 supports Display P3** — a ~30% wider gamut especially in reds and greens. iOS auto-degrades to sRGB on older hardware, so there's no risk to defaulting to P3.
+
+OKLCH solves a different problem: it ensures your palette feels *balanced* (equal `L` looks equally bright across all hues — try the same with HSL and one color always wins).
+
+These are two rules, not one. You want both:
+- **OKLCH** for the picking step → perceptual consistency across the palette.
+- **Display P3** for the rendering step → wider gamut on capable hardware.
+- **sRGB** is the fallback iOS chooses for you → never the destination you author against.
+
+A hand-coded sRGB hex in your codebase is a code smell unless it's matching a third-party brand color that's officially specified in sRGB. Everything else should go through the OKLCH-→-P3 workflow detailed below in this section.
+
 ### True black for OLED
 
 On OLED displays (every iPhone since X), `#000000` literally turns OFF the pixel. This means:
@@ -717,12 +732,14 @@ LinearGradient(
 
 Generate stops via [culori](https://culorijs.org/) (Node), [oklch.com](https://oklch.com)'s gradient tool, or any OKLCH library — bake the hex into Swift once.
 
-**4. Use Display P3 for vivid colors.** P3 is a wider gamut than sRGB; reds redder, greens greener. Every Apple device since 2017 supports it. iOS auto-degrades to sRGB on older hardware. Almost no apps bother — free polish win.
+**4. Display P3 is the default — sRGB is a fallback you never type.** P3 is a ~30% wider gamut than sRGB; reds redder, greens greener, especially in vivid brand colors. Every Apple device since 2017 supports it natively, and iOS auto-degrades to sRGB on older hardware — zero risk. Most apps still ship sRGB hex everywhere because someone copy-pasted from a non-iOS tool. Don't.
 
 ```swift
-Color(red: 1.0, green: 0.2, blue: 0.4)                  // sRGB — bounded gamut
-Color(.displayP3, red: 1.0, green: 0.2, blue: 0.4)      // P3 — full screen gamut
+Color(red: 1.0, green: 0.2, blue: 0.4)                  // ❌ sRGB — leaves color on the table
+Color(.displayP3, red: 1.0, green: 0.2, blue: 0.4)      // ✅ P3 — uses the full screen gamut
 ```
+
+**Every hand-coded color in your app should specify `.displayP3` as the color space.** No exceptions for "convenience" — `Color(red:green:blue:)` without it gets you sRGB silently. The `Color(hex:)` helper below uses P3 by default; use it.
 
 **A `Color(hex:)` helper** (keep your codebase clean):
 

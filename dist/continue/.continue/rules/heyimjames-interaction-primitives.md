@@ -228,7 +228,7 @@ struct PremiumWidget: View {
 **Rules:**
 - **Home widgets only.** Lock Screen widgets render in tint-mode (monochrome) — MeshGradient gets flattened and looks broken. Use `.containerBackground(.fill.tertiary, for: .widget)` (semantic) for Lock variants.
 - **Dynamic Island is forbidden from backgrounds.** Apple's HIG: foreground elements only. Never apply MeshGradient or any background fill to a Dynamic Island presentation.
-- **Pick colors in OKLCH** so the mesh feels balanced rather than chaotic. See `the-final-5-percent` §5.
+- **Pick colors in OKLCH and ship as Display P3** — `Color(.displayP3, red:green:blue:)` — so the mesh feels balanced AND renders at the wider gamut on every Apple device since 2017. See `the-final-5-percent` §5 for the full workflow.
 - **Keep text high-contrast.** A MeshGradient background means dynamic colors behind your text. Add a subtle shadow or use `.foregroundStyle(.white)` with a translucent darkening layer if needed for legibility.
 
 ### Anti-patterns
@@ -1060,7 +1060,7 @@ viewController.present(vc, animated: true)
 | Rule | Detail |
 | --- | --- |
 | **Pass style matters** | `storeCard`, `generic`, `eventTicket`, `boardingPass`, `coupon` — each has system layout |
-| **Background image** | Full-bleed art at 320×460pt. Pick OKLCH-balanced colors (see [the-final-5-percent §5](../the-final-5-percent/SKILL.md#5-color--material)) |
+| **Background image** | Full-bleed art at 320×460pt. Pick OKLCH-balanced colors, render at Display P3 in your design tool (see [the-final-5-percent §5](../the-final-5-percent/SKILL.md#5-color--material)) |
 | **Logo + label** | Top-left. 160pt wide max. Keep simple |
 | **Primary field** | The big number — points, balance, tier |
 | **Secondary fields** | 2–3 supporting stats |

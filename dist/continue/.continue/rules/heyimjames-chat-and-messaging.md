@@ -619,7 +619,7 @@ try engine.makePlayer(with: pattern).start(atTime: 0)
 
 ## Color & material
 
-- **Sent bubble**: app's accent color. For iMessage parity: `Color(red: 0.0, green: 0.48, blue: 1.0)` (iMessage blue). For green-bubble nostalgia: `Color(red: 0.21, green: 0.78, blue: 0.35)` (SMS green).
+- **Sent bubble**: app's accent color. For iMessage parity: `Color(.displayP3, red: 0.0, green: 0.48, blue: 1.0)` (iMessage blue). For green-bubble nostalgia: `Color(.displayP3, red: 0.21, green: 0.78, blue: 0.35)` (SMS green). **Always ship hand-coded colors as Display P3** — see `the-final-5-percent` §5 for the OKLCH-pick / P3-ship workflow that applies to every color in this skill.
 - **Received bubble**: `Color(.tertiarySystemGroupedBackground)` (light), `Color(.systemGray5)` (dark).
 - **Background of conversation**: `Color(.systemGroupedBackground)` (light), `Color(.systemBackground)` (dark). Telegram and WhatsApp use a subtle pattern/wallpaper — if you do this, make it OFF by default.
 
