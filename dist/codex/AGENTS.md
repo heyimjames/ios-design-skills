@@ -6,14 +6,14 @@ consult the relevant section based on what you're building.
 
 ## Index
 
-- **iOS Camera & Photos** — see `## iOS Camera & Photos` below
-- **iOS Chat & Messaging** — see `## iOS Chat & Messaging` below
-- **iOS Interaction Primitives (Widgets, Live Activities, Haptics)** — see `## iOS Interaction Primitives (Widgets, Live Activities, Haptics)` below
-- **The Final 5% — iOS Polish** — see `## The Final 5% — iOS Polish` below
+- **heyimjames:camera-and-photos — Camera & Photos** — see `## heyimjames:camera-and-photos — Camera & Photos` below
+- **heyimjames:chat-and-messaging — Chat & Messaging** — see `## heyimjames:chat-and-messaging — Chat & Messaging` below
+- **heyimjames:interaction-primitives — Widgets, Live Activities, Haptics** — see `## heyimjames:interaction-primitives — Widgets, Live Activities, Haptics` below
+- **heyimjames:the-final-5-percent — The Final 5% Polish** — see `## heyimjames:the-final-5-percent — The Final 5% Polish` below
 
 ---
 
-## iOS Camera & Photos
+## heyimjames:camera-and-photos — Camera & Photos
 
 _When to use this section: Design and build best-in-class native iOS camera, photo-capture, and photo-editing apps with the polish of Halide, Kino, Lapse, VSCO, and Apple Photos. Use this skill whenever the user is building, reviewing, or refining a SwiftUI/UIKit app that involves the camera, photo library, video capture, image editing, filters, scanning, AR effects, AI photo features, or anything backed by AVFoundation, PhotoKit, Vision, VisionKit, Core Image, ImageCaptureCore, ARKit, RoomPlan, or LiDAR. Triggers on: camera, viewfinder, shutter button, capture, AVCaptureSession, AVCapturePhotoOutput, AVCaptureMovieFileOutput, PHPicker, PhotoKit, photo library, photo gallery, photo grid, photo edit, photo filter, photo crop, photo adjustment, sliders, presets, LUT, Cinematic mode, Portrait mode, ProRAW, Apple ProRes, Live Photos, HDR, Smart HDR, depth, LiDAR, subject lifting, VisionKit, Live Text, DataScannerViewController, document scanner, QR scanner, barcode, scanner, magic eraser, object removal, sky replacement, AI photo, on-device ML, Core ML, Vision framework, ARKit face tracking, Snapchat-style filters, AR effects, lens, beauty filter, focus, exposure, white balance, ISO, shutter speed, manual camera controls, Camera Control button, volume button shutter, spatial photo, spatial video, Apple Vision Pro._
 
@@ -729,7 +729,7 @@ The benchmark: someone uses your app for a week, takes a photo they're proud of,
 
 ---
 
-## iOS Chat & Messaging
+## heyimjames:chat-and-messaging — Chat & Messaging
 
 _When to use this section: Design and build best-in-class native iOS chat, messaging, and group chat apps with the polish of iMessage, Telegram, WhatsApp, Snapchat, Instagram DMs, and Discord. Use this skill whenever the user is building, reviewing, or refining a SwiftUI/UIKit app that involves direct messages, group chats, threads, voice messages, video calls, reactions, typing indicators, presence, read receipts, ephemeral messages, end-to-end encryption, push notifications, or anything backed by APNs, PushKit, CallKit, CryptoKit, NotificationServiceExtension, or Live Activities. Triggers on: chat, messaging, message bubble, group chat, DM, direct message, conversation, composer, message input, reactions, tapback, emoji reaction, reply, thread, threaded reply, typing indicator, presence, online status, last seen, read receipt, double check, blue check, voice message, audio message, push-to-talk, voice note, waveform, end-to-end encryption, E2EE, Signal protocol, ephemeral, disappearing message, view once, self-destruct, sticker, GIF, animated emoji, Genmoji, iMessage app, message effect, confetti, balloons, Live Activity, Dynamic Island, push notification, NSE, notification service extension, CallKit, PushKit, video call, audio call, FaceTime, Communication Notification, Shared with You, SharePlay, App Clip, App Intent, Siri Send Message, CryptoKit._
 
@@ -1654,7 +1654,7 @@ The benchmark: a user opens your chat app to send a quick message and finds them
 
 ---
 
-## iOS Interaction Primitives (Widgets, Live Activities, Haptics)
+## heyimjames:interaction-primitives — Widgets, Live Activities, Haptics
 
 _When to use this section: Design and build best-in-class native iOS interaction surfaces — Home Screen widgets, Lock Screen widgets, StandBy widgets, Live Activities, Dynamic Island presentations, Control Center custom controls, Haptic Touch context menus, haptic feedback (UIFeedbackGenerator and CoreHaptics), Action Button, Camera Control button, App Intents, Symbol Effects, and Focus filters. Use this skill whenever the user is building or polishing any of these peripheral surfaces that surround a native iOS app, especially for apps targeting iOS 17, iOS 18, or iOS 26 (Liquid Glass). Triggers on: widget, WidgetKit, TimelineProvider, Home Screen widget, Lock Screen widget, StandBy widget, interactive widget, widget toggle, widget button, App Intent, AppIntent, ControlWidget, Control Center widget, ControlWidgetButton, ControlWidgetToggle, Live Activity, ActivityKit, Dynamic Island, compact presentation, expanded presentation, minimal presentation, lock screen presentation, ActivityAttributes, Live Activity push, push token update, Communication Notifications, Haptic Touch, long press, context menu, UIContextMenuInteraction, peek and pop, 3D Touch, haptic feedback, UIImpactFeedbackGenerator, UISelectionFeedbackGenerator, UINotificationFeedbackGenerator, CoreHaptics, CHHapticEngine, CHHapticPattern, CHHapticEvent, AHAP, custom haptic, haptic AHAP, Action Button, Camera Control, half press, full press, Symbol Effects, symbolEffect, bounce, pulse, variableColor, Focus filters, FocusFilterIntent, sensitive content analysis, Live Text, App Shortcuts, Siri Shortcuts, iOS 26, Liquid Glass widget, glassEffect._
 
@@ -3050,7 +3050,7 @@ The benchmark: a user puts their phone face-down on the table. Six hours later, 
 
 ---
 
-## The Final 5% — iOS Polish
+## heyimjames:the-final-5-percent — The Final 5% Polish
 
 _When to use this section: The final 5% of detail that separates a competent iOS app from a beloved one. Use this skill whenever the user is building, reviewing, or polishing a native Swift/SwiftUI iOS app and wants it to feel custom, considered, and crafted — like Halide, Things 3, Linear, Granola, or Apple's own apps. Triggers on: polish, premium feel, details, micro-interactions, craft, attention to detail, taste, feels generic, doesn't feel right, missing something, make it premium, make it feel custom, animation polish, transitions, hero animation, matchedGeometryEffect, spring animations, easing curves, .smooth, .snappy, .bouncy, content transitions, numeric text, symbol effects, SF Symbols, SF Pro typography, optical sizes, dynamic type, tracking, kerning, line height, color hierarchy, semantic colors, true black, OLED, Liquid Glass, iOS 26 design, glass effect, glassEffect, GlassEffectContainer, sensoryFeedback, haptic feedback patterns, sound design, empty states, loading states, skeleton screens, blurhash, image fade in, hero transitions, celebrations, confetti, onboarding polish, paywall polish, settings polish, microcopy, voice, tone, accessibility as polish, Reduce Motion, Dynamic Type, VoiceOver, tap target, .contentShape, interruptible animations, rubber banding, parallax, drag interactions, page transitions, modal presentation, sheet detents._
 

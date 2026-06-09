@@ -101,11 +101,16 @@ EOF
         fi
         mkdir -p "$TARGET"
         if [[ "$ACTION" == "install" ]]; then
+            # Remove any legacy "ios-*.mdc" files from before the heyimjames rebrand
+            rm -f "$TARGET"/ios-*.mdc
             cp "$REPO_DIR"/dist/cursor/.cursor/rules/*.mdc "$TARGET/"
             echo "✓ Copied 4 rules into $TARGET"
+            echo "  Files: heyimjames-camera-and-photos.mdc, heyimjames-chat-and-messaging.mdc,"
+            echo "         heyimjames-interaction-primitives.mdc, heyimjames-the-final-5-percent.mdc"
             echo "  Cursor will auto-attach them based on file globs."
         else
-            rm -f "$TARGET"/ios-*.mdc
+            rm -f "$TARGET"/heyimjames-*.mdc
+            rm -f "$TARGET"/ios-*.mdc          # legacy cleanup
             echo "✓ Removed iOS rules from $TARGET"
         fi
         ;;
@@ -190,10 +195,12 @@ open(p, 'w').write(content)
         fi
         mkdir -p "$TARGET"
         if [[ "$ACTION" == "install" ]]; then
+            rm -f "$TARGET"/ios-*.md           # legacy cleanup
             cp "$REPO_DIR"/dist/continue/.continue/rules/*.md "$TARGET/"
             echo "✓ Copied 4 rules into $TARGET"
         else
-            rm -f "$TARGET"/ios-*.md
+            rm -f "$TARGET"/heyimjames-*.md
+            rm -f "$TARGET"/ios-*.md           # legacy cleanup
             echo "✓ Removed iOS rules from $TARGET"
         fi
         ;;
@@ -203,10 +210,12 @@ open(p, 'w').write(content)
         TARGET="$PWD/.rules"
         mkdir -p "$TARGET"
         if [[ "$ACTION" == "install" ]]; then
+            rm -f "$TARGET"/ios-*.md           # legacy cleanup
             cp "$REPO_DIR"/dist/zed/.rules/*.md "$TARGET/"
             echo "✓ Copied 4 rules into $TARGET"
         else
-            rm -f "$TARGET"/ios-*.md
+            rm -f "$TARGET"/heyimjames-*.md
+            rm -f "$TARGET"/ios-*.md           # legacy cleanup
             echo "✓ Removed iOS rules from $TARGET"
         fi
         ;;

@@ -31,11 +31,14 @@ SKILLS = [
 
 # Per-skill, per-tool config
 SKILL_LABELS = {
-    "camera-and-photos": "iOS Camera & Photos",
-    "chat-and-messaging": "iOS Chat & Messaging",
-    "interaction-primitives": "iOS Interaction Primitives (Widgets, Live Activities, Haptics)",
-    "the-final-5-percent": "The Final 5% — iOS Polish",
+    "camera-and-photos": "heyimjames:camera-and-photos — Camera & Photos",
+    "chat-and-messaging": "heyimjames:chat-and-messaging — Chat & Messaging",
+    "interaction-primitives": "heyimjames:interaction-primitives — Widgets, Live Activities, Haptics",
+    "the-final-5-percent": "heyimjames:the-final-5-percent — The Final 5% Polish",
 }
+
+# File-name prefix for per-skill outputs (Cursor / Continue / Zed)
+FILE_PREFIX = "heyimjames-"
 
 # File patterns that auto-attach each rule in Cursor/Windsurf/Continue
 SKILL_GLOBS = {
@@ -107,12 +110,14 @@ def build_cursor(skills_data):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for skill_name, (fm, body) in skills_data.items():
-        target = out_dir / f"ios-{skill_name}.mdc"
+        target = out_dir / f"{FILE_PREFIX}{skill_name}.mdc"
         globs = SKILL_GLOBS.get(skill_name, ["**/*.swift"])
         globs_str = ", ".join(f'"{g}"' for g in globs)
 
-        # Cursor description should be a single line; strip newlines from canonical
-        description = fm.get("description", "").replace("\n", " ").strip()
+        # Cursor description should be a single line; strip newlines from canonical.
+        # Prefix with the brand for visibility in Cursor's rules panel.
+        raw_description = fm.get("description", "").replace("\n", " ").strip()
+        description = f"heyimjames:{skill_name} — {raw_description}"
 
         frontmatter = (
             "---\n"
@@ -123,7 +128,7 @@ def build_cursor(skills_data):
         )
 
         target.write_text(frontmatter + body, encoding="utf-8")
-        print(f"  ✓ cursor/.cursor/rules/ios-{skill_name}.mdc")
+        print(f"  ✓ cursor/.cursor/rules/{FILE_PREFIX}{skill_name}.mdc")
 
 
 # -------- Codex CLI ----------------------------------------------------------
@@ -198,7 +203,7 @@ def build_continue(skills_data):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for skill_name, (fm, body) in skills_data.items():
-        target = out_dir / f"ios-{skill_name}.md"
+        target = out_dir / f"{FILE_PREFIX}{skill_name}.md"
         description = fm.get("description", "").replace("\n", " ").strip()
         frontmatter = (
             "---\n"
@@ -207,7 +212,7 @@ def build_continue(skills_data):
             "---\n\n"
         )
         target.write_text(frontmatter + body, encoding="utf-8")
-        print(f"  ✓ continue/.continue/rules/ios-{skill_name}.md")
+        print(f"  ✓ continue/.continue/rules/{FILE_PREFIX}{skill_name}.md")
 
 
 # -------- Zed ----------------------------------------------------------------
@@ -217,12 +222,12 @@ def build_zed(skills_data):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for skill_name, (fm, body) in skills_data.items():
-        target = out_dir / f"ios-{skill_name}.md"
+        target = out_dir / f"{FILE_PREFIX}{skill_name}.md"
         # Zed reads plain markdown
         description = fm.get("description", "").replace("\n", " ").strip()
         header = f"# {SKILL_LABELS[skill_name]}\n\n_{description}_\n\n---\n\n"
         target.write_text(header + body, encoding="utf-8")
-        print(f"  ✓ zed/.rules/ios-{skill_name}.md")
+        print(f"  ✓ zed/.rules/{FILE_PREFIX}{skill_name}.md")
 
 
 # -------- Main ---------------------------------------------------------------
