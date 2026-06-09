@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/header.png" alt="heyimjames — iOS Design Engineering Skills" width="100%">
+</p>
+
 # iOS Design Engineering Skills
 
 Four detailed, opinionated design-engineering skills for building **best-in-class native iOS/SwiftUI apps** — installable into Claude Code, Cursor, Codex CLI, Windsurf, Aider, Continue, and Zed.
