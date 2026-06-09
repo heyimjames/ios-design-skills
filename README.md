@@ -4,7 +4,7 @@
 
 # iOS Design Engineering Skills
 
-Four detailed, opinionated design-engineering skills for building **best-in-class native iOS/SwiftUI apps** — installable into Claude Code, Cursor, Codex CLI, Windsurf, Aider, Continue, and Zed.
+Five detailed, opinionated design-engineering skills for building **best-in-class native Swift/SwiftUI apps on iOS and macOS** — installable into Claude Code, Cursor, Codex CLI, Windsurf, Aider, Continue, and Zed.
 
 > "Whoever made this actually gives a shit."
 > That's the only goal.
@@ -20,7 +20,8 @@ Four detailed, opinionated design-engineering skills for building **best-in-clas
 | [**Camera & Photos**](plugins/heyimjames/skills/camera-and-photos/SKILL.md) | Capture UX, viewfinder, editing flows, library, AI photo features, AVFoundation / PhotoKit / Vision / LiDAR / Cinematic / ProRAW / Camera Control button | ~668 |
 | [**Chat & Messaging**](plugins/heyimjames/skills/chat-and-messaging/SKILL.md) | Bubble grouping, composer, reactions, voice messages, typing/presence, encryption, CallKit / PushKit / Live Activities / NSE / Communication Notifications | ~881 |
 | [**Interaction Primitives**](plugins/heyimjames/skills/interaction-primitives/SKILL.md) | Home / Lock / StandBy widgets, Live Activities, Dynamic Island, Haptic Touch, `.sensoryFeedback`, Core Haptics, Action Button, Symbol Effects, Focus filters, Liquid Glass | ~1127 |
-| [**The Final 5%**](plugins/heyimjames/skills/the-final-5-percent/SKILL.md) | Motion physics, hero transitions, typography, color hierarchy, spacing rhythm, loading/empty states, microcopy, accessibility-as-polish, iOS 26 Liquid Glass | ~1959 |
+| [**The Final 5%**](plugins/heyimjames/skills/the-final-5-percent/SKILL.md) | Motion physics, hero transitions, typography, color hierarchy (OKLCH + Display P3), spacing rhythm, buttons & CTAs, sheets & detents, shareable image generation, loading/empty states, microcopy, accessibility-as-polish, iOS 26 Liquid Glass | ~2978 |
+| [**macOS App Design**](plugins/heyimjames/skills/macos-app-design/SKILL.md) | Native macOS app design — window architecture, NavigationSplitView sidebar, toolbar conventions, menu bar, Cmd-K command palette, hover/trackpad/right-click, multi-window/document architecture, MenuBarExtra, Liquid Glass on Tahoe, code-app specifics (syntax highlighting, file trees), Settings window, About panel, Sparkle distribution. OpenAI Codex / Linear / Things 3 quality. | ~1919 |
 
 Each skill is **opinionated and specific** — exact spring damping ratios, exact corner radii, exact haptic styles, exact font sizes. The kind of detail that separates a competent app from a beloved one.
 
@@ -41,13 +42,14 @@ In any Claude Code session:
 /plugin install heyimjames@heyimjames
 ```
 
-After install, the four skills are namespace-prefixed under your brand:
+After install, the five skills are namespace-prefixed under your brand:
 
 ```
 heyimjames:camera-and-photos
 heyimjames:chat-and-messaging
 heyimjames:interaction-primitives
 heyimjames:the-final-5-percent
+heyimjames:macos-app-design
 ```
 
 Every invocation requires typing `heyimjames:` — branding by design. Claude Code auto-invokes each skill based on the `Triggers on:` keyword list in its description, so you rarely have to type the name yourself in conversational use.
@@ -160,7 +162,8 @@ ios-design-skills/                            ← marketplace root
 │           ├── camera-and-photos/SKILL.md
 │           ├── chat-and-messaging/SKILL.md
 │           ├── interaction-primitives/SKILL.md
-│           └── the-final-5-percent/SKILL.md
+│           ├── the-final-5-percent/SKILL.md
+│           └── macos-app-design/SKILL.md
 ├── install.sh                                ← per-tool installer for non-Claude tools
 ├── build.sh                                  ← regenerates dist/ from canonical source
 ├── scripts/
