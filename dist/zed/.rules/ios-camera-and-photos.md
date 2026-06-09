@@ -437,6 +437,8 @@ The wrong font wrecks the whole feel. Defaults that work:
 - **Yellow accent** (`UIColor.systemYellow`) for active controls — the iconic Apple Camera convention. Branded apps replace with their accent, but yellow communicates "active manual control".
 - **Backdrop blurs**: use `UIVisualEffectView` with `.systemUltraThinMaterialDark` for floating control palettes. On iOS 26+, prefer the new `.glassEffect()` modifier or `expo-glass-effect` style Liquid Glass surfaces — but ONLY if your app's overall design language is Liquid Glass. Mixing styles looks broken.
 - **Photo previews**: pure black background. Never a pattern, never a gradient, never a card. Photos against black is iconic for a reason.
+- **Chrome palette via OKLCH**: when designing the camera's accent palette (active controls, mode-selected indicators, focus rings, recording dot), pick all colors at the SAME OKLCH `L` value (e.g., `L=0.7`) so they feel like siblings — no color dominates the chrome. See `the-final-5-percent` §5 for the full workflow. This is what makes Halide and Kino's chrome feel so refined: every active indicator has the same perceived brightness as every other.
+- **Histograms use perceptual luminance, not RGB.** If your editing UI shows a histogram, the standard RGB histogram is misleading — pure yellow registers high in R+G but the eye sees it as a single value. Compute luminance via OKLCH `L` (or BT.709 luma at minimum) for an accurate exposure read. Photographers will notice.
 
 ---
 

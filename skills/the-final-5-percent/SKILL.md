@@ -663,6 +663,226 @@ LinearGradient(
 LinearGradient(colors: [.purple, .blue, .pink], ...)
 ```
 
+### Color in OKLCH — perceptually-uniform palettes
+
+The problem with hex / RGB / HSL: equal "lightness" values do **not** look equally bright. Pure yellow at HSL 50% L is wildly brighter than pure blue at HSL 50% L. That's why most hand-picked palettes feel uneven — one color always "wins" because the others are actually darker.
+
+**OKLCH** (Oklab Lightness/Chroma/Hue) is perceptually uniform — equal `L` looks equally bright across every hue:
+- `L`: 0–1.0 lightness (perceptually uniform)
+- `C`: 0+ chroma (saturation independent of hue)
+- `H`: 0–360° hue
+
+SwiftUI doesn't expose OKLCH natively yet (as of iOS 26), but the workflow is straightforward:
+
+**1. Design in OKLCH, ship as Display P3 hex.** Pick palettes at [oklch.com](https://oklch.com), convert to hex once, bake into `Color` extensions:
+
+```swift
+// All three designed at oklch(0.65 0.18 H) — same perceptual brightness
+extension Color {
+    static let brandBlue  = Color(.displayP3, red: 0.184, green: 0.490, blue: 0.871) // H=240
+    static let brandGreen = Color(.displayP3, red: 0.067, green: 0.561, blue: 0.349) // H=145
+    static let brandRed   = Color(.displayP3, red: 0.937, green: 0.349, blue: 0.337) // H=20
+}
+```
+
+All three feel like *siblings* — no color screams. Try the same with naive RGB picking and one will dominate.
+
+**2. Dark-mode pairs by lowering `L` only.** Keep `C` and `H` constant — the perceived hue stays identical, just darker. HSL-based dark-mode tools shift hue with brightness, producing muddy results.
+
+```
+Light: oklch(0.65 0.18 240)  → #2F7DDE
+Dark:  oklch(0.45 0.18 240)  → #1A52A8
+```
+
+**3. Multi-stop gradients with OKLCH intermediates.** SwiftUI's `LinearGradient(colors:)` interpolates in linear-RGB by default — so yellow→blue passes through **gray** in the middle. Fix: generate stops in OKLCH (where hue rotates smoothly through green→teal) and pass them as explicit `stops:`.
+
+```swift
+// Bad — RGB-lerp passes through gray
+LinearGradient(colors: [.yellow, .blue], startPoint: .top, endPoint: .bottom)
+
+// Good — OKLCH stops rotate through proper intermediate hues
+LinearGradient(
+    stops: [
+        .init(color: Color(hex: "#FFFF00"), location: 0.00),
+        .init(color: Color(hex: "#7BC569"), location: 0.33),  // OKLCH lerp midpoint
+        .init(color: Color(hex: "#3A87C0"), location: 0.66),  // OKLCH lerp midpoint
+        .init(color: Color(hex: "#0000FF"), location: 1.00),
+    ],
+    startPoint: .top, endPoint: .bottom
+)
+```
+
+Generate stops via [culori](https://culorijs.org/) (Node), [oklch.com](https://oklch.com)'s gradient tool, or any OKLCH library — bake the hex into Swift once.
+
+**4. Use Display P3 for vivid colors.** P3 is a wider gamut than sRGB; reds redder, greens greener. Every Apple device since 2017 supports it. iOS auto-degrades to sRGB on older hardware. Almost no apps bother — free polish win.
+
+```swift
+Color(red: 1.0, green: 0.2, blue: 0.4)                  // sRGB — bounded gamut
+Color(.displayP3, red: 1.0, green: 0.2, blue: 0.4)      // P3 — full screen gamut
+```
+
+**A `Color(hex:)` helper** (keep your codebase clean):
+
+```swift
+extension Color {
+    init(hex: String, opacity: Double = 1.0) {
+        var hex = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        if hex.hasPrefix("#") { hex.removeFirst() }
+        var rgb: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&rgb)
+        self.init(
+            .displayP3,
+            red:   Double((rgb & 0xFF0000) >> 16) / 255,
+            green: Double((rgb & 0x00FF00) >> 8)  / 255,
+            blue:  Double( rgb & 0x0000FF)        / 255,
+            opacity: opacity
+        )
+    }
+}
+```
+
+### Subtle background textures — beyond flat color
+
+A pure flat `Color(.systemBackground)` is fine for utility apps but reads as "generic" for products that want to feel crafted. Stripe, Linear, Mercury, Arc, Things 3, Granola all layer one or more of these techniques.
+
+**The hierarchy of background polish (compose as needed):**
+
+| Layer | Use | Performance |
+| --- | --- | --- |
+| Solid color | Utility apps, dense lists | Free |
+| Subtle gradient (5–10% saturation Δ) | Most product surfaces | Free |
+| MeshGradient (iOS 18+) | Onboarding, paywall, splash, hero | Cheap |
+| Noise overlay (3–6% PNG or Canvas) | Anti-banding on any gradient | Free (static) |
+| Tiled subtle pattern (dots, grain) | Brand-defining surfaces | Cheap (cached) |
+| Vignette / corner light | Atmospheric depth | Free |
+| Animated TimelineView gradient | Hero moments only | Heavy — cap fps |
+
+**1. MeshGradient — the new primitive (iOS 18+)**
+
+`MeshGradient` places colors at points on a 2D grid and blends organically. Looks hand-painted, not "computer gradient." New gold standard for hero backgrounds.
+
+```swift
+MeshGradient(
+    width: 3, height: 3,
+    points: [
+        [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
+        [0.0, 0.5], [0.5, 0.5], [1.0, 0.5],
+        [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
+    ],
+    colors: [
+        .pink.opacity(0.5),   .orange.opacity(0.4), .yellow.opacity(0.3),
+        .purple.opacity(0.4), .blue.opacity(0.3),   .mint.opacity(0.3),
+        .indigo.opacity(0.4), .teal.opacity(0.3),   .green.opacity(0.2)
+    ]
+)
+.ignoresSafeArea()
+```
+
+Animate via `TimelineView` for slow organic drift:
+
+```swift
+TimelineView(.animation) { ctx in
+    let t = ctx.date.timeIntervalSinceReferenceDate
+    MeshGradient(
+        width: 3, height: 3,
+        points: [
+            [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
+            [0.0, 0.5],
+            [0.5 + 0.05 * sin(t * 0.4), 0.5 + 0.05 * cos(t * 0.4)],  // drifts
+            [1.0, 0.5],
+            [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
+        ],
+        colors: meshColors
+    )
+}
+```
+
+**2. Noise / film grain — eliminates banding**
+
+Solid gradients on OLED screens BAND visibly. A 3–6% opacity noise overlay breaks the gradient up at the pixel level and adds film-grain texture the eye reads as "rich" without consciously identifying it.
+
+```swift
+ZStack {
+    LinearGradient(colors: [.purple.opacity(0.2), .pink.opacity(0.1)],
+                   startPoint: .top, endPoint: .bottom)
+
+    Image("noise-256")              // 256×256 PNG of fine grain, tileable
+        .resizable(resizingMode: .tile)
+        .opacity(0.04)
+        .blendMode(.overlay)
+        .allowsHitTesting(false)
+        .ignoresSafeArea()
+}
+```
+
+**Critical: < 6% opacity.** If you can SEE grain, it's too much. The point is for the eye to read depth without identifying the source. Generate a 256×256 noise PNG once in any image tool (or procedurally via `Canvas` for sharper dark/light adaptation).
+
+**3. Tiled subtle patterns — Linear's dots, Things 3's paper**
+
+Custom `Canvas` view drawn once, cached via `.drawingGroup()`. Adapts to color scheme via semantic colors.
+
+```swift
+struct DotGridBackground: View {
+    var body: some View {
+        Canvas { context, size in
+            let spacing: CGFloat = 24
+            let dotSize: CGFloat = 1.5
+            let color = Color(.label).opacity(0.06)
+            for x in stride(from: spacing, to: size.width, by: spacing) {
+                for y in stride(from: spacing, to: size.height, by: spacing) {
+                    let rect = CGRect(x: x - dotSize/2, y: y - dotSize/2,
+                                      width: dotSize, height: dotSize)
+                    context.fill(Path(ellipseIn: rect), with: .color(color))
+                }
+            }
+        }
+        .drawingGroup()              // rasterize once for perf
+        .allowsHitTesting(false)
+    }
+}
+```
+
+Rules: opacity ≤ 8%; small repeats (high frequency); adapts to light/dark via `.label`.
+
+**4. Vignettes & corner lights — "lit from somewhere"**
+
+A `RadialGradient` with `.blendMode(.plusLighter)` adds depth without explicit decoration. Apple Music does this on dark UIs.
+
+```swift
+ZStack {
+    Color(.systemBackground)
+
+    RadialGradient(
+        colors: [Color.white.opacity(0.08), .clear],
+        center: .topLeading,
+        startRadius: 0, endRadius: 400
+    )
+    .blendMode(.plusLighter)
+    .allowsHitTesting(false)
+}
+```
+
+Reverse for vignettes (darken edges): `RadialGradient` from `.clear` center → `.black.opacity(0.3)` edges with default blend.
+
+**5. Animated TimelineView gradients — hero moments only**
+
+```swift
+TimelineView(.animation) { ctx in
+    let phase = ctx.date.timeIntervalSinceReferenceDate * 0.1
+    LinearGradient(
+        colors: [.purple, .pink, .orange],
+        startPoint: UnitPoint(x: 0.5 + 0.4 * cos(phase), y: 0.5 + 0.4 * sin(phase)),
+        endPoint:   UnitPoint(x: 0.5 - 0.4 * cos(phase), y: 0.5 - 0.4 * sin(phase))
+    )
+}
+```
+
+Use SPARINGLY — too heavy for every screen. On older devices, prefer `MeshGradient` with point animation (much cheaper) over animated `LinearGradient`.
+
+**The compose pattern:**
+
+A premium paywall background = `MeshGradient` base + noise overlay at 4% + corner light at upper-left with `.plusLighter`. Perceived complexity: low. Actual richness: high. Stack these like layers in Figma — that's the trick.
+
 ### Trays adopt the environment
 
 When a sheet, popover, or context menu appears from a themed surface — a dark chat thread, a black-chrome camera UI, a brand-tinted onboarding flow — it must INHERIT that environment's color scheme and tint. A sticker picker over a dark chat should be dark. A confirmation in a camera UI should be black. A modal in branded onboarding should pick up the brand color.
@@ -792,14 +1012,15 @@ Hierarchical mode is the easiest polish win — your icons get depth for free.
 | Effect | Trigger | Use |
 | --- | --- | --- |
 | `.symbolEffect(.bounce, value: trigger)` | One-shot | Confirmation taps (like, save, send) |
-| `.symbolEffect(.pulse)` | Continuous | Recording, processing, "listening" |
+| `.symbolEffect(.pulse)` | Continuous, **active state only** | Recording, processing, "listening" — NOT decoration |
 | `.symbolEffect(.variableColor)` | Animation | Wi-Fi loading, signal acquiring |
 | `.symbolEffect(.scale.up, isActive: ...)` | State-based | Emphasis on important state |
 | `.symbolEffect(.appear / .disappear)` | View visibility | Polished on/off |
 | `.symbolEffect(.wiggle, value: trigger)` (iOS 18+) | One-shot | Playful "no" gesture |
-| `.symbolEffect(.breathe)` (iOS 18+) | Continuous | Ambient, calm presence |
 | `.symbolEffect(.rotate, value: trigger)` | One-shot | Refresh, reload |
 | `.contentTransition(.symbolEffect(.replace))` | Symbol change | Play ↔ Pause, Heart ↔ Heart Fill |
+
+**Note**: `.symbolEffect(.breathe)` exists (iOS 18+) but **avoid it** — see anti-pattern below.
 
 Examples:
 ```swift
@@ -819,6 +1040,33 @@ Image(systemName: "record.circle.fill")
     .foregroundStyle(.red)
     .symbolEffect(.pulse, isActive: isRecording)
 ```
+
+### Icon motion: DO morph, DON'T breathe
+
+Modern SF Symbols are the most powerful animatable iconography on any mobile platform. But the failure mode is consistent across AI-generated apps and template builds: **ambient scale-pulsing and "breathing" animations on icons that aren't doing anything**. They always look bad. They scream "generic," they age poorly, and they pull the eye for no reason.
+
+**DO** — motion must be **triggered** by user action or **anchored** to a real state change:
+
+| Pattern | Use |
+| --- | --- |
+| `.contentTransition(.symbolEffect(.replace))` | The single most useful effect. Morph one symbol into another on state change: Play ↔ Pause, Heart ↔ Heart.Fill, Bookmark ↔ Bookmark.Fill, Eye ↔ Eye.Slash. Looks expensive, costs nothing. |
+| `.symbolEffect(.bounce, value: trigger)` | Single bounce on user action: tap to like, tap to save, send confirmation. Always paired with `.sensoryFeedback`. |
+| `.symbolEffect(.pulse, isActive: isRecording)` | ACTIVE-STATE indicator only — when something is genuinely happening (recording, AI processing, listening for voice input). Stops the moment the state ends. |
+| `.symbolEffect(.variableColor.iterative, isActive: isConnecting)` | Loading / acquiring (Wi-Fi connecting, signal searching). Communicates "in progress." |
+| `.symbolEffect(.wiggle, value: errorTrigger)` | Playful denial — "no, you can't drop that here." Use sparingly. |
+| `.symbolEffect(.rotate, value: refreshTrigger)` | One-shot rotation on refresh / reload action. |
+
+**DON'T** — never animate icons that aren't responding to a real event:
+
+- ❌ **`.symbolEffect(.breathe)` for ambient "calm presence"** — looks like a screensaver. The icon pulses for no reason. Every "AI meditation app" template uses this. Skip it.
+- ❌ **Continuous scale-pulse on a heart, star, or favorite icon when nothing is happening** — feels like the icon is begging for a tap. Trust the icon to communicate via its shape alone.
+- ❌ **`.symbolEffect(.pulse, options: .repeating)` on idle UI** — pulse means "active right now." Repeating it forever makes "active" meaningless.
+- ❌ **Bouncing the tab bar icon you're currently on** — drains attention from content. Apple's own tab bar doesn't do this.
+- ❌ **Animating ALL the icons in a row to draw attention to one** — the eye picks up the motion, not the meaning. If one icon is important, isolate it; don't animate the whole row.
+
+**The rule**: every icon animation must answer the question "what just happened?" If the answer is "nothing," remove it. Static icons are not boring — they're confident. Animated icons signal an event. When EVERYTHING signals, NOTHING signals.
+
+The Apple-native litmus test: open the system Messages, Photos, or Mail app. Watch how few icon animations they use. The polish is in restraint.
 
 ### Variable symbols
 

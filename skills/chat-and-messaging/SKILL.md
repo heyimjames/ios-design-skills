@@ -624,6 +624,14 @@ try engine.makePlayer(with: pattern).start(atTime: 0)
 - **Sent bubble**: app's accent color. For iMessage parity: `Color(red: 0.0, green: 0.48, blue: 1.0)` (iMessage blue). For green-bubble nostalgia: `Color(red: 0.21, green: 0.78, blue: 0.35)` (SMS green).
 - **Received bubble**: `Color(.tertiarySystemGroupedBackground)` (light), `Color(.systemGray5)` (dark).
 - **Background of conversation**: `Color(.systemGroupedBackground)` (light), `Color(.systemBackground)` (dark). Telegram and WhatsApp use a subtle pattern/wallpaper — if you do this, make it OFF by default.
+
+**Chat wallpapers done right.** If you offer wallpapers (Telegram/WhatsApp pattern), each one is layered:
+1. **Base color** picked in OKLCH so all wallpapers share the same perceived brightness (no "this one is darker than that one" inconsistency).
+2. **Subtle pattern OR MeshGradient** (iOS 18+) for organic richness — never a flat gradient, which BANDS on OLED behind bubbles.
+3. **3–6% noise overlay** with `.blendMode(.overlay)` to eliminate banding and add film-grain texture.
+4. **Bubble contrast check** — every wallpaper must keep both sent and received bubbles legible (WCAG AA against the background gradient at the bubble's edges, not just the center).
+
+See `the-final-5-percent` §5 for the full OKLCH workflow and `MeshGradient` / noise overlay patterns. Apply the same hierarchy to wallpapers as to any premium background.
 - **Composer background**: `Color(.systemBackground)` with a top border (`Color(.separator)`, 0.5pt).
 - **Unread badge**: `Color(.systemBlue)`.
 - **Failed/error**: `Color(.systemRed)`.

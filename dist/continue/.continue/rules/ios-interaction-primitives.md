@@ -188,6 +188,37 @@ Text("\(entry.steps)")
     .widgetAccentable() // gets tinted in Accent mode
 ```
 
+### MeshGradient for premium Home Screen widgets (iOS 18+)
+
+For brand-defining widgets where the background IS part of the personality (workout apps, finance apps, music apps), use `MeshGradient` as the container background. It looks hand-painted and renders for free.
+
+```swift
+struct PremiumWidget: View {
+    let entry: Entry
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("\(entry.value)")
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            Text("Today").font(.caption).foregroundStyle(.white.opacity(0.8))
+        }
+        .containerBackground(for: .widget) {
+            MeshGradient(
+                width: 2, height: 2,
+                points: [[0,0], [1,0], [0,1], [1,1]],
+                colors: [.indigo, .purple, .pink, .orange]
+            )
+        }
+    }
+}
+```
+
+**Rules:**
+- **Home widgets only.** Lock Screen widgets render in tint-mode (monochrome) — MeshGradient gets flattened and looks broken. Use `.containerBackground(.fill.tertiary, for: .widget)` (semantic) for Lock variants.
+- **Dynamic Island is forbidden from backgrounds.** Apple's HIG: foreground elements only. Never apply MeshGradient or any background fill to a Dynamic Island presentation.
+- **Pick colors in OKLCH** so the mesh feels balanced rather than chaotic. See `the-final-5-percent` §5.
+- **Keep text high-contrast.** A MeshGradient background means dynamic colors behind your text. Add a subtle shadow or use `.foregroundStyle(.white)` with a translucent darkening layer if needed for legibility.
+
 ### Anti-patterns
 - **Don't put a "Open App" button.** Tap-anywhere-to-open is automatic. Buttons should DO things.
 - **Don't fill the widget with chrome.** Top label + giant data point + maybe one secondary element. That's it.
