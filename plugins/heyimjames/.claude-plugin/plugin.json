@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "heyimjames",
   "displayName": "heyimjames — iOS Design Skills",
-  "description": "Four detailed iOS/SwiftUI design-engineering skills by James Frewin — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics, Wallet passes), and the final 5% of polish (motion physics, OKLCH+Display P3 color, typography, MeshGradient backgrounds, shareable image generation). After install, invoke via heyimjames:camera-and-photos, heyimjames:chat-and-messaging, heyimjames:interaction-primitives, heyimjames:the-final-5-percent.",
+  "description": "Five detailed Swift/SwiftUI design-engineering skills by James Frewin — iOS camera & photos, iOS chat & messaging, iOS interaction primitives (widgets, Live Activities, Dynamic Island, haptics, Wallet passes), the final 5% of polish (motion physics, OKLCH+Display P3 color, typography, MeshGradient backgrounds, shareable image generation), and native macOS app design (OpenAI Codex / Linear / Things 3 quality — window architecture, sidebars, menu bar, keyboard shortcuts, Liquid Glass on Tahoe). After install, invoke via heyimjames:camera-and-photos, heyimjames:chat-and-messaging, heyimjames:interaction-primitives, heyimjames:the-final-5-percent, heyimjames:macos-app-design.",
   "author": {
     "name": "James Frewin",
     "url": "https://jamesfrewin.com"
@@ -12,9 +12,12 @@
   "license": "MIT",
   "keywords": [
     "ios",
+    "macos",
     "swift",
     "swiftui",
     "ios-26",
+    "macos-26",
+    "tahoe",
     "liquid-glass",
     "design-engineering",
     "polish",
@@ -24,6 +27,9 @@
     "live-activities",
     "haptics",
     "oklch",
-    "display-p3"
+    "display-p3",
+    "mac-app",
+    "codex",
+    "appkit"
   ]
 }

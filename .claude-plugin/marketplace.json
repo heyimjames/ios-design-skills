@@ -8,9 +8,9 @@
     {
       "name": "heyimjames",
       "source": "./plugins/heyimjames",
-      "description": "Four detailed iOS/SwiftUI design-engineering skills — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics), and the final 5% of polish.",
+      "description": "Five detailed Swift/SwiftUI design-engineering skills — iOS camera & photos, iOS chat & messaging, iOS interaction primitives (widgets, Live Activities, Dynamic Island, haptics), the final 5% of polish, and native macOS app design (Codex/Linear/Things 3 quality).",
       "category": "design",
-      "keywords": ["ios", "swift", "swiftui", "design-engineering", "polish", "liquid-glass", "ios-26"]
+      "keywords": ["ios", "macos", "swift", "swiftui", "design-engineering", "polish", "liquid-glass", "ios-26", "macos-26", "tahoe"]
     }
   ]
 }

@@ -27,6 +27,7 @@ SKILLS = [
     "chat-and-messaging",
     "interaction-primitives",
     "the-final-5-percent",
+    "macos-app-design",
 ]
 
 # Per-skill, per-tool config
@@ -35,6 +36,7 @@ SKILL_LABELS = {
     "chat-and-messaging": "heyimjames:chat-and-messaging — Chat & Messaging",
     "interaction-primitives": "heyimjames:interaction-primitives — Widgets, Live Activities, Haptics",
     "the-final-5-percent": "heyimjames:the-final-5-percent — The Final 5% Polish",
+    "macos-app-design": "heyimjames:macos-app-design — Native macOS App Design",
 }
 
 # File-name prefix for per-skill outputs (Cursor / Continue / Zed)
@@ -61,6 +63,15 @@ SKILL_GLOBS = {
     ],
     "the-final-5-percent": [
         "**/*.swift",  # cross-cutting polish — applies to any Swift code
+    ],
+    "macos-app-design": [
+        "**/*.swift",  # macOS apps are Swift; specific files harder to glob
+        "**/AppDelegate*.swift",
+        "**/NSWindow*.swift",
+        "**/MainWindow*.swift",
+        "**/Sidebar*.swift",
+        "**/Toolbar*.swift",
+        "**/MenuBar*.swift",
     ],
 }
 
@@ -142,11 +153,11 @@ def build_codex(skills_data):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     parts = [
-        "# iOS Design Engineering Skills\n",
+        "# heyimjames — Design Engineering Skills\n",
         "\n",
-        "This document encodes four detailed design-engineering skills for building\n",
-        "best-in-class native iOS/SwiftUI apps. When working on Swift/SwiftUI code,\n",
-        "consult the relevant section based on what you're building.\n",
+        "This document encodes five detailed design-engineering skills for building\n",
+        "best-in-class native Swift/SwiftUI apps on iOS and macOS. When working on\n",
+        "Swift/SwiftUI code, consult the relevant section based on what you're building.\n",
         "\n",
         "## Index\n",
         "\n",
