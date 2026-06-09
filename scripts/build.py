@@ -27,7 +27,6 @@ SKILLS = [
     "chat-and-messaging",
     "interaction-primitives",
     "the-final-5-percent",
-    "og-image-design",
 ]
 
 # Per-skill, per-tool config
@@ -36,7 +35,6 @@ SKILL_LABELS = {
     "chat-and-messaging": "heyimjames:chat-and-messaging — Chat & Messaging",
     "interaction-primitives": "heyimjames:interaction-primitives — Widgets, Live Activities, Haptics",
     "the-final-5-percent": "heyimjames:the-final-5-percent — The Final 5% Polish",
-    "og-image-design": "heyimjames:og-image-design — OG Image Design",
 }
 
 # File-name prefix for per-skill outputs (Cursor / Continue / Zed)
@@ -63,15 +61,6 @@ SKILL_GLOBS = {
     ],
     "the-final-5-percent": [
         "**/*.swift",  # cross-cutting polish — applies to any Swift code
-    ],
-    "og-image-design": [
-        # Cross-platform — attaches when OG-image-related files are in context.
-        "**/og*.tsx", "**/og*.ts", "**/og*.jsx", "**/og*.js",
-        "**/opengraph-image*.tsx", "**/opengraph-image*.ts", "**/opengraph-image*.jsx", "**/opengraph-image*.js",
-        "**/twitter-image*.tsx", "**/twitter-image*.ts",
-        "**/og.html", "**/og-image*.html",
-        "**/satori*.ts", "**/satori*.tsx",
-        "**/*.figma.ts",  # designers staging an OG in Code Connect
     ],
 }
 
@@ -153,13 +142,11 @@ def build_codex(skills_data):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     parts = [
-        "# heyimjames Design-Engineering Skills\n",
+        "# iOS Design Engineering Skills\n",
         "\n",
-        "This document encodes five detailed design-engineering skills — four for\n",
-        "building best-in-class native iOS/SwiftUI apps, plus one cross-platform\n",
-        "OG image design skill. When working on Swift/SwiftUI code, consult the\n",
-        "relevant iOS section. When designing OG / social-preview images, consult\n",
-        "the OG section.\n",
+        "This document encodes four detailed design-engineering skills for building\n",
+        "best-in-class native iOS/SwiftUI apps. When working on Swift/SwiftUI code,\n",
+        "consult the relevant section based on what you're building.\n",
         "\n",
         "## Index\n",
         "\n",

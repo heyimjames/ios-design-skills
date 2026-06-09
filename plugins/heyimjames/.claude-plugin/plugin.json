@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "heyimjames",
-  "displayName": "heyimjames — Design Engineering Skills",
-  "description": "Five detailed design-engineering skills by James Frewin — four iOS/SwiftUI (camera & photos, chat & messaging, interaction primitives, the final 5% of polish) and one cross-platform (OG image design — thumbnail-survival rules, composition archetypes drawn from ogimage.gallery, prompt-anatomy for AI image generation, Figma/Paper/Satori routing). After install, invoke via heyimjames:camera-and-photos, heyimjames:chat-and-messaging, heyimjames:interaction-primitives, heyimjames:the-final-5-percent, heyimjames:og-image-design.",
+  "displayName": "heyimjames — iOS Design Skills",
+  "description": "Four detailed iOS/SwiftUI design-engineering skills by James Frewin — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics, Wallet passes), and the final 5% of polish (motion physics, OKLCH+Display P3 color, typography, MeshGradient backgrounds, shareable image generation). After install, invoke via heyimjames:camera-and-photos, heyimjames:chat-and-messaging, heyimjames:interaction-primitives, heyimjames:the-final-5-percent.",
   "author": {
     "name": "James Frewin",
     "url": "https://jamesfrewin.com"
@@ -24,11 +24,6 @@
     "live-activities",
     "haptics",
     "oklch",
-    "display-p3",
-    "og-image",
-    "open-graph",
-    "twitter-card",
-    "link-preview",
-    "ai-image-generation"
+    "display-p3"
   ]
 }

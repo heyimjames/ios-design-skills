@@ -1,6 +1,6 @@
 {
   "name": "heyimjames",
-  "description": "James Frewin's personal marketplace — opinionated design-engineering skills (iOS + cross-platform).",
+  "description": "James Frewin's personal marketplace — opinionated iOS/SwiftUI design-engineering skills.",
   "owner": {
     "name": "James Frewin"
   },
@@ -8,9 +8,9 @@
     {
       "name": "heyimjames",
       "source": "./plugins/heyimjames",
-      "description": "Five detailed design-engineering skills — four iOS/SwiftUI (camera & photos, chat & messaging, interaction primitives, the final 5% of polish) and one cross-platform OG image design skill (thumbnail-survival rules, archetypes from ogimage.gallery, AI image-generation playbook, Figma/Paper/Satori routing).",
+      "description": "Four detailed iOS/SwiftUI design-engineering skills — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics), and the final 5% of polish.",
       "category": "design",
-      "keywords": ["ios", "swift", "swiftui", "design-engineering", "polish", "liquid-glass", "ios-26", "og-image", "open-graph", "twitter-card", "link-preview"]
+      "keywords": ["ios", "swift", "swiftui", "design-engineering", "polish", "liquid-glass", "ios-26"]
     }
   ]
 }
