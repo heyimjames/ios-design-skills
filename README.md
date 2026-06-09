@@ -26,12 +26,39 @@ Pick your tool. One command, one place.
 
 > First-time: `chmod +x install.sh build.sh` (the script will tell you if you forgot).
 
-### Claude Code (recommended — full skill system)
+### Claude Code (via plugin marketplace — recommended)
 
-```bash
-./install.sh claude-code
+In any Claude Code session:
+
 ```
-Symlinks the four skills into `~/.claude/skills/`. Claude Code auto-invokes each one based on the `Triggers on:` keyword list in its description.
+/plugin marketplace add heyimjames/ios-design-skills
+/plugin install heyimjames@heyimjames
+```
+
+After install, the four skills are namespace-prefixed under your brand:
+
+```
+heyimjames:camera-and-photos
+heyimjames:chat-and-messaging
+heyimjames:interaction-primitives
+heyimjames:the-final-5-percent
+```
+
+Every invocation requires typing `heyimjames:` — branding by design. Claude Code auto-invokes each skill based on the `Triggers on:` keyword list in its description, so you rarely have to type the name yourself in conversational use.
+
+For LOCAL development (so edits to your local clone are picked up by Claude Code without re-pushing to GitHub):
+
+```
+/plugin marketplace add /path/to/this/repo
+/plugin install heyimjames@heyimjames
+```
+
+To uninstall:
+
+```
+/plugin uninstall heyimjames@heyimjames
+/plugin marketplace remove heyimjames
+```
 
 ### Cursor
 
@@ -89,7 +116,7 @@ Drops the four skills into `.rules/` in the current project.
 
 | Tool | Mechanism | Configured by |
 | --- | --- | --- |
-| **Claude Code** | Description-based — the model matches the user's prompt against each skill's `description` + trigger keywords | Already baked into the canonical `SKILL.md` frontmatter |
+| **Claude Code** | Description-based — the model matches the user's prompt against each skill's `description` + trigger keywords. Plugin namespacing prefixes every skill name with `heyimjames:` | Already baked into the canonical `SKILL.md` frontmatter + `plugins/heyimjames/.claude-plugin/plugin.json` |
 | **Cursor** | File globs — rule auto-attaches when matching files are in context | `globs:` injected by the build script |
 | **Codex / Aider / Windsurf** | Always-loaded — present in every prompt of the project | Just install once per project |
 | **Continue** | Description-based + `.md` file frontmatter | Injected by the build script |
@@ -114,20 +141,25 @@ If you edit anything in `skills/*/SKILL.md`, run `./build.sh` before committing 
 ## Repo layout
 
 ```
-ios-design-skills/
-├── README.md             ← this file
-├── LICENSE               ← MIT
-├── plugin.json           ← Claude Code plugin manifest
-├── install.sh            ← per-tool installer
-├── build.sh              ← regenerates dist/ from skills/
+ios-design-skills/                            ← marketplace root
+├── README.md
+├── LICENSE                                   ← MIT
+├── .claude-plugin/
+│   └── marketplace.json                      ← Claude Code marketplace catalog
+├── plugins/
+│   └── heyimjames/                           ← the plugin (name = invocation prefix)
+│       ├── .claude-plugin/
+│       │   └── plugin.json                   ← plugin manifest
+│       └── skills/                           ← canonical source (Claude Code native)
+│           ├── camera-and-photos/SKILL.md
+│           ├── chat-and-messaging/SKILL.md
+│           ├── interaction-primitives/SKILL.md
+│           └── the-final-5-percent/SKILL.md
+├── install.sh                                ← per-tool installer for non-Claude tools
+├── build.sh                                  ← regenerates dist/ from canonical source
 ├── scripts/
-│   └── build.py          ← Python build logic (stdlib only)
-├── skills/               ← canonical source (Claude Code native format)
-│   ├── camera-and-photos/SKILL.md
-│   ├── chat-and-messaging/SKILL.md
-│   ├── interaction-primitives/SKILL.md
-│   └── the-final-5-percent/SKILL.md
-└── dist/                 ← auto-generated per-tool variants (committed)
+│   └── build.py                              ← Python build logic (stdlib only)
+└── dist/                                     ← auto-generated per-tool variants
     ├── cursor/.cursor/rules/*.mdc
     ├── codex/AGENTS.md
     ├── aider/CONVENTIONS.md

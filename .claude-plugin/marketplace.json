@@ -1,0 +1,15 @@
+{
+  "name": "heyimjames",
+  "owner": {
+    "name": "James Frewin"
+  },
+  "plugins": [
+    {
+      "name": "heyimjames",
+      "source": "./plugins/heyimjames",
+      "description": "Four detailed iOS/SwiftUI design-engineering skills — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics), and the final 5% of polish.",
+      "category": "design",
+      "keywords": ["ios", "swift", "swiftui", "design-engineering", "polish", "liquid-glass", "ios-26"]
+    }
+  ]
+}

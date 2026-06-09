@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SKILLS_DIR = REPO_ROOT / "skills"
+SKILLS_DIR = REPO_ROOT / "plugins" / "heyimjames" / "skills"
 DIST_DIR = REPO_ROOT / "dist"
 
 SKILLS = [

@@ -61,25 +61,35 @@ fi
 case "$TOOL" in
     # ------------------------------------------------------------------
     claude-code)
-        TARGET="$HOME/.claude/skills"
-        mkdir -p "$TARGET"
-        if [[ "$ACTION" == "install" ]]; then
-            for skill in "${SKILLS[@]}"; do
-                ln -sfn "$REPO_DIR/skills/$skill" "$TARGET/$skill"
-                echo "  ✓ linked $TARGET/$skill"
-            done
-            echo
-            echo "✓ Installed 4 skills into Claude Code."
-            echo "  Restart Claude Code (or /reload) to pick them up."
-        else
-            for skill in "${SKILLS[@]}"; do
-                if [[ -L "$TARGET/$skill" ]]; then
-                    rm -f "$TARGET/$skill"
-                    echo "  ✓ removed $TARGET/$skill"
-                fi
-            done
-            echo "✓ Uninstalled from Claude Code."
-        fi
+        cat <<EOF
+For Claude Code, install via the plugin marketplace.
+
+In any Claude Code session, run:
+
+  /plugin marketplace add heyimjames/ios-design-skills
+  /plugin install heyimjames@heyimjames
+
+After install, the four skills are invokable as:
+
+  heyimjames:camera-and-photos
+  heyimjames:chat-and-messaging
+  heyimjames:interaction-primitives
+  heyimjames:the-final-5-percent
+
+For LOCAL development (so edits to this repo are picked up):
+
+  /plugin marketplace add $REPO_DIR
+  /plugin install heyimjames@heyimjames
+
+To uninstall:
+
+  /plugin uninstall heyimjames@heyimjames
+  /plugin marketplace remove heyimjames
+
+Note: claude-code's skill installer no longer uses symlinks — the plugin
+marketplace flow gives proper "heyimjames:" namespacing, so every skill
+invocation requires typing the heyimjames brand.
+EOF
         ;;
 
     # ------------------------------------------------------------------

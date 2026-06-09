@@ -1,0 +1,9 @@
+{
+  "name": "heyimjames",
+  "version": "1.0.0",
+  "description": "Four detailed iOS/SwiftUI design-engineering skills by James Frewin — camera & photos, chat & messaging, interaction primitives (widgets, Live Activities, Dynamic Island, haptics), and the final 5% of polish. After install, invoke via heyimjames:camera-and-photos, heyimjames:chat-and-messaging, heyimjames:interaction-primitives, heyimjames:the-final-5-percent.",
+  "author": {
+    "name": "James Frewin"
+  },
+  "license": "MIT"
+}
