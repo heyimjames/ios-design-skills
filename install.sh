@@ -15,7 +15,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILLS=(camera-and-photos chat-and-messaging interaction-primitives the-final-5-percent)
+SKILLS=(camera-and-photos chat-and-messaging interaction-primitives the-final-5-percent og-image-design)
 
 TOOL="${1:-}"
 shift || true
@@ -69,12 +69,13 @@ In any Claude Code session, run:
   /plugin marketplace add heyimjames/ios-design-skills
   /plugin install heyimjames@heyimjames
 
-After install, the four skills are invokable as:
+After install, the five skills are invokable as:
 
   heyimjames:camera-and-photos
   heyimjames:chat-and-messaging
   heyimjames:interaction-primitives
   heyimjames:the-final-5-percent
+  heyimjames:og-image-design
 
 For LOCAL development (so edits to this repo are picked up):
 
