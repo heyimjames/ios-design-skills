@@ -21,6 +21,33 @@ _When to use this section: Design and build best-in-class native iOS camera, pho
 
 A taste guide for building camera and photo apps that feel like they were made by people who actually shoot photos. Every value in this file is opinionated and specific — pulled from studying flows on Mobbin and shipping native iOS apps.
 
+## Output format — required
+
+When this skill is invoked to review camera/photo code or recommend changes, **always output recommendations as a markdown table** with three columns:
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| The current code, value, or approach (quote the user's actual code when possible) | The recommended replacement — **specific**, with exact values | One sentence on what the user will *see, feel, or experience* differently |
+
+Three rules:
+1. **Before** quotes the user's actual code where possible.
+2. **After** is specific. Exact pt values, exact haptic styles, exact API calls.
+3. **What this changes** is *experiential or visual*, not abstract.
+
+Output ONE table with multiple rows for multi-recommendation reviews — not one table per row. Use `—` for Before if the user hasn't implemented that thing yet.
+
+**Examples drawn from this skill:**
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| `Circle().frame(width: 80, height: 80)` as shutter | 76pt outer ring (4pt stroke) + 60pt inner fill with 4pt gap | Shutter reads as a real camera button instead of a generic dot — matches Apple Camera convention and signals "this app respects your craft" |
+| `AVCapturePhotoOutput.capturePhoto(...)` fired on `.onEnded` (touch-up) | Fire on `.onChanged` (touch-down) with a prepared `.impact(weight: .light)` haptic | Capture latency drops from ~50ms to <5ms; the click feels mechanical instead of laggy — the moment is preserved |
+| `Color(red: 1.0, green: 0.85, blue: 0.0)` (focus ring yellow) | `Color(.displayP3, red: 1.0, green: 0.85, blue: 0.0)` | Focus ring renders at full chroma on every Apple device since 2017 — chrome feels Halide-refined instead of generic-iOS |
+
+This format is required for every recommendation output by this skill.
+
+---
+
 ## Philosophy
 
 > The camera is a feeling, not a feature.
@@ -736,6 +763,33 @@ _When to use this section: Design and build best-in-class native iOS chat, messa
 # iOS Chat & Messaging — Design Engineering Skill
 
 A taste guide for building messaging apps that feel like they belong on iOS. Every value below is opinionated and specific — pulled from studying flows on Mobbin and shipping native chat apps.
+
+## Output format — required
+
+When this skill is invoked to review chat/messaging code or recommend changes, **always output recommendations as a markdown table** with three columns:
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| The current code, value, or approach (quote the user's actual code when possible) | The recommended replacement — **specific**, with exact values | One sentence on what the user will *see, feel, or experience* differently |
+
+Three rules:
+1. **Before** quotes the user's actual code where possible.
+2. **After** is specific. Exact pt values, exact corner radii, exact haptic styles, exact API calls.
+3. **What this changes** is *experiential or visual*, not abstract.
+
+Output ONE table with multiple rows for multi-recommendation reviews — not one table per row. Use `—` for Before if the user hasn't implemented that thing yet.
+
+**Examples drawn from this skill:**
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| `cornerRadius: 16` applied uniformly to every message bubble | First/last bubbles in a burst get 18pt continuous; middle bubbles get 4pt small radius on inside-edges | Bubble grouping reads as conversation rhythm — same-speaker messages cluster visually, switches between speakers separate clearly. Reading speed up ~3× |
+| Tap-and-release send button with `UIImpactFeedbackGenerator(.light)` on `.onTapGesture` | `.sensoryFeedback(.impact(weight: .light), trigger: messageId) { _, new in new != nil }` firing on touch-DOWN | Haptic latency drops from ~50ms to <5ms; the send feels acknowledged instantly instead of "did that go?" |
+| `Color(red: 0.0, green: 0.48, blue: 1.0)` (iMessage blue) | `Color(.displayP3, red: 0.0, green: 0.48, blue: 1.0)` | Sent bubbles render at full chroma on every Apple device since 2017 — feels native instead of slightly washed out |
+
+This format is required for every recommendation output by this skill.
+
+---
 
 ## Philosophy
 
@@ -1661,6 +1715,33 @@ _When to use this section: Design and build best-in-class native iOS interaction
 # iOS Interaction Primitives — Design Engineering Skill
 
 A taste guide for the *peripheral* surfaces that surround a native iOS app — the Home Screen widget, the Dynamic Island, the haptic pulse on a button press. These are not afterthoughts. For many users, these surfaces are the *primary* product. Spotify's widget gets opened 50× more often than the app. Flighty's Dynamic Island is more memorable than Flighty's main screen.
+
+## Output format — required
+
+When this skill is invoked to review widget/Live-Activity/haptic code or recommend changes, **always output recommendations as a markdown table** with three columns:
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| The current code, value, or approach (quote the user's actual code when possible) | The recommended replacement — **specific**, with exact values | One sentence on what the user will *see, feel, or experience* differently |
+
+Three rules:
+1. **Before** quotes the user's actual code where possible.
+2. **After** is specific. Exact API calls, exact `.sensoryFeedback` styles, exact widget container modifiers.
+3. **What this changes** is *experiential or visual*, not abstract.
+
+Output ONE table with multiple rows for multi-recommendation reviews — not one table per row. Use `—` for Before if the user hasn't implemented that thing yet.
+
+**Examples drawn from this skill:**
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| Widget with `.background(Color.white)` | `.containerBackground(.fill.tertiary, for: .widget)` | Widget auto-adapts to iOS 26 Liquid Glass, dark mode, and Lock Screen tint with zero additional code |
+| Live Activity that pushes server updates every second to refresh a countdown | `Text(timerInterval: now...endDate, countsDown: true)` rendered once | Countdown ticks on-device without burning push budget — same visual, zero server cost, no latency variance |
+| `.symbolEffect(.breathe)` on an idle icon as ambient decoration | Remove it entirely (icon stays static) | The icon stops looking like a screensaver — confidence over noise; static is more refined than animated-for-no-reason |
+
+This format is required for every recommendation output by this skill.
+
+---
 
 ## Philosophy
 
@@ -3061,6 +3142,35 @@ _When to use this section: The final 5% of detail that separates a competent iOS
 That's the only goal. Everything in this file is in service of someone using your app and feeling, in their bones, that a human cared. This is the skill you load when the app *works* but doesn't *feel right*. When everything compiles and ships but the spark is missing.
 
 This skill assumes a native Swift/SwiftUI iOS app, targeting iOS 17 minimum and ideally iOS 26 (Liquid Glass). It pairs with [camera-and-photos](../camera-and-photos/SKILL.md), [chat-and-messaging](../chat-and-messaging/SKILL.md), and [interaction-primitives](../interaction-primitives/SKILL.md) — but the patterns here apply to every app.
+
+---
+
+## Output format — required
+
+When this skill is invoked to review code, audit a design, or recommend changes, **always output recommendations as a markdown table** with three columns:
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| The current code, value, or approach (quote the user's actual code when possible) | The recommended replacement — **specific**, with exact values | One sentence on what the user will *see, feel, or experience* differently |
+
+Three rules:
+1. **Before** quotes the user's actual code where possible. If you're warning against a pattern they haven't written yet, write what they *would* have written.
+2. **After** is specific. Exact spring values, exact corner radii, exact haptic styles. "Use a spring" isn't an After; `.spring(duration: 0.32, bounce: 0.18)` is.
+3. **What this changes** is *experiential or visual*, not abstract. Not "improves the animation" — say what the user sees. "Spring settles in 0.32s with subtle overshoot — feels intentional, not floaty."
+
+For multi-recommendation reviews, output ONE table with multiple rows — NOT one table per row. The whole point is side-by-side comparability; splitting defeats it.
+
+If a recommendation has no clear "before" (the user hasn't done that thing yet), keep the table format but mark Before as `—` or `(not yet implemented)`. Don't drop the table.
+
+**Examples drawn from this skill:**
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| `Color(red: 1.0, green: 0.2, blue: 0.4)` | `Color(.displayP3, red: 1.0, green: 0.2, blue: 0.4)` | The pink renders with ~30% more chroma on every Apple device since 2017 — more vivid without changing any other code |
+| `.animation(.snappy)` (blanket modifier) | `.animation(.snappy, value: isExpanded)` | Animation fires only on the intended state change, not on every unrelated re-render — no more "why is this animating?" debug sessions |
+| `Image("heart")` (static) on a like button | `Image(systemName: liked ? "heart.fill" : "heart").contentTransition(.symbolEffect(.replace))` + `.sensoryFeedback(.impact(weight: .light), trigger: liked)` | The heart morphs smoothly with a soft haptic on tap instead of popping — feels like the icon "heard" you |
+
+This format is required for every recommendation output by this skill. Bullet lists hide the trade-offs; tables make them comparable side-by-side.
 
 ---
 

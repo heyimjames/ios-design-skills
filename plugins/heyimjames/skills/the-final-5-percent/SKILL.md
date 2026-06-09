@@ -15,6 +15,35 @@ This skill assumes a native Swift/SwiftUI iOS app, targeting iOS 17 minimum and 
 
 ---
 
+## Output format — required
+
+When this skill is invoked to review code, audit a design, or recommend changes, **always output recommendations as a markdown table** with three columns:
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| The current code, value, or approach (quote the user's actual code when possible) | The recommended replacement — **specific**, with exact values | One sentence on what the user will *see, feel, or experience* differently |
+
+Three rules:
+1. **Before** quotes the user's actual code where possible. If you're warning against a pattern they haven't written yet, write what they *would* have written.
+2. **After** is specific. Exact spring values, exact corner radii, exact haptic styles. "Use a spring" isn't an After; `.spring(duration: 0.32, bounce: 0.18)` is.
+3. **What this changes** is *experiential or visual*, not abstract. Not "improves the animation" — say what the user sees. "Spring settles in 0.32s with subtle overshoot — feels intentional, not floaty."
+
+For multi-recommendation reviews, output ONE table with multiple rows — NOT one table per row. The whole point is side-by-side comparability; splitting defeats it.
+
+If a recommendation has no clear "before" (the user hasn't done that thing yet), keep the table format but mark Before as `—` or `(not yet implemented)`. Don't drop the table.
+
+**Examples drawn from this skill:**
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| `Color(red: 1.0, green: 0.2, blue: 0.4)` | `Color(.displayP3, red: 1.0, green: 0.2, blue: 0.4)` | The pink renders with ~30% more chroma on every Apple device since 2017 — more vivid without changing any other code |
+| `.animation(.snappy)` (blanket modifier) | `.animation(.snappy, value: isExpanded)` | Animation fires only on the intended state change, not on every unrelated re-render — no more "why is this animating?" debug sessions |
+| `Image("heart")` (static) on a like button | `Image(systemName: liked ? "heart.fill" : "heart").contentTransition(.symbolEffect(.replace))` + `.sensoryFeedback(.impact(weight: .light), trigger: liked)` | The heart morphs smoothly with a soft haptic on tap instead of popping — feels like the icon "heard" you |
+
+This format is required for every recommendation output by this skill. Bullet lists hide the trade-offs; tables make them comparable side-by-side.
+
+---
+
 ## Philosophy
 
 The principle these apps share — Halide, Kino, Things 3, Linear, Family, Granola, Apple's first-party apps:

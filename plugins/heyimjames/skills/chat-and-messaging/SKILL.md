@@ -9,6 +9,33 @@ metadata:
 
 A taste guide for building messaging apps that feel like they belong on iOS. Every value below is opinionated and specific — pulled from studying flows on Mobbin and shipping native chat apps.
 
+## Output format — required
+
+When this skill is invoked to review chat/messaging code or recommend changes, **always output recommendations as a markdown table** with three columns:
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| The current code, value, or approach (quote the user's actual code when possible) | The recommended replacement — **specific**, with exact values | One sentence on what the user will *see, feel, or experience* differently |
+
+Three rules:
+1. **Before** quotes the user's actual code where possible.
+2. **After** is specific. Exact pt values, exact corner radii, exact haptic styles, exact API calls.
+3. **What this changes** is *experiential or visual*, not abstract.
+
+Output ONE table with multiple rows for multi-recommendation reviews — not one table per row. Use `—` for Before if the user hasn't implemented that thing yet.
+
+**Examples drawn from this skill:**
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| `cornerRadius: 16` applied uniformly to every message bubble | First/last bubbles in a burst get 18pt continuous; middle bubbles get 4pt small radius on inside-edges | Bubble grouping reads as conversation rhythm — same-speaker messages cluster visually, switches between speakers separate clearly. Reading speed up ~3× |
+| Tap-and-release send button with `UIImpactFeedbackGenerator(.light)` on `.onTapGesture` | `.sensoryFeedback(.impact(weight: .light), trigger: messageId) { _, new in new != nil }` firing on touch-DOWN | Haptic latency drops from ~50ms to <5ms; the send feels acknowledged instantly instead of "did that go?" |
+| `Color(red: 0.0, green: 0.48, blue: 1.0)` (iMessage blue) | `Color(.displayP3, red: 0.0, green: 0.48, blue: 1.0)` | Sent bubbles render at full chroma on every Apple device since 2017 — feels native instead of slightly washed out |
+
+This format is required for every recommendation output by this skill.
+
+---
+
 ## Philosophy
 
 > A chat app is a feeling of being heard, fast.

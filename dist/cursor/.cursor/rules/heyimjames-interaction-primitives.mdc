@@ -8,6 +8,33 @@ alwaysApply: false
 
 A taste guide for the *peripheral* surfaces that surround a native iOS app — the Home Screen widget, the Dynamic Island, the haptic pulse on a button press. These are not afterthoughts. For many users, these surfaces are the *primary* product. Spotify's widget gets opened 50× more often than the app. Flighty's Dynamic Island is more memorable than Flighty's main screen.
 
+## Output format — required
+
+When this skill is invoked to review widget/Live-Activity/haptic code or recommend changes, **always output recommendations as a markdown table** with three columns:
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| The current code, value, or approach (quote the user's actual code when possible) | The recommended replacement — **specific**, with exact values | One sentence on what the user will *see, feel, or experience* differently |
+
+Three rules:
+1. **Before** quotes the user's actual code where possible.
+2. **After** is specific. Exact API calls, exact `.sensoryFeedback` styles, exact widget container modifiers.
+3. **What this changes** is *experiential or visual*, not abstract.
+
+Output ONE table with multiple rows for multi-recommendation reviews — not one table per row. Use `—` for Before if the user hasn't implemented that thing yet.
+
+**Examples drawn from this skill:**
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| Widget with `.background(Color.white)` | `.containerBackground(.fill.tertiary, for: .widget)` | Widget auto-adapts to iOS 26 Liquid Glass, dark mode, and Lock Screen tint with zero additional code |
+| Live Activity that pushes server updates every second to refresh a countdown | `Text(timerInterval: now...endDate, countsDown: true)` rendered once | Countdown ticks on-device without burning push budget — same visual, zero server cost, no latency variance |
+| `.symbolEffect(.breathe)` on an idle icon as ambient decoration | Remove it entirely (icon stays static) | The icon stops looking like a screensaver — confidence over noise; static is more refined than animated-for-no-reason |
+
+This format is required for every recommendation output by this skill.
+
+---
+
 ## Philosophy
 
 > The app is the universe. The widget is the planet you see from your bed.

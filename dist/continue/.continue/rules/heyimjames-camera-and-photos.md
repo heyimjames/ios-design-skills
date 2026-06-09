@@ -7,6 +7,33 @@ description: Design and build best-in-class native iOS camera, photo-capture, an
 
 A taste guide for building camera and photo apps that feel like they were made by people who actually shoot photos. Every value in this file is opinionated and specific — pulled from studying flows on Mobbin and shipping native iOS apps.
 
+## Output format — required
+
+When this skill is invoked to review camera/photo code or recommend changes, **always output recommendations as a markdown table** with three columns:
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| The current code, value, or approach (quote the user's actual code when possible) | The recommended replacement — **specific**, with exact values | One sentence on what the user will *see, feel, or experience* differently |
+
+Three rules:
+1. **Before** quotes the user's actual code where possible.
+2. **After** is specific. Exact pt values, exact haptic styles, exact API calls.
+3. **What this changes** is *experiential or visual*, not abstract.
+
+Output ONE table with multiple rows for multi-recommendation reviews — not one table per row. Use `—` for Before if the user hasn't implemented that thing yet.
+
+**Examples drawn from this skill:**
+
+| Before | After | What this changes |
+| --- | --- | --- |
+| `Circle().frame(width: 80, height: 80)` as shutter | 76pt outer ring (4pt stroke) + 60pt inner fill with 4pt gap | Shutter reads as a real camera button instead of a generic dot — matches Apple Camera convention and signals "this app respects your craft" |
+| `AVCapturePhotoOutput.capturePhoto(...)` fired on `.onEnded` (touch-up) | Fire on `.onChanged` (touch-down) with a prepared `.impact(weight: .light)` haptic | Capture latency drops from ~50ms to <5ms; the click feels mechanical instead of laggy — the moment is preserved |
+| `Color(red: 1.0, green: 0.85, blue: 0.0)` (focus ring yellow) | `Color(.displayP3, red: 1.0, green: 0.85, blue: 0.0)` | Focus ring renders at full chroma on every Apple device since 2017 — chrome feels Halide-refined instead of generic-iOS |
+
+This format is required for every recommendation output by this skill.
+
+---
+
 ## Philosophy
 
 > The camera is a feeling, not a feature.
